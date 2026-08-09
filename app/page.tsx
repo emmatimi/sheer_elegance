@@ -373,8 +373,8 @@ export default function Home() {
           <button className="read-more-button" onClick={() => openBooking()}>Reserve your chair</button>
         </div>
         <div className="contact-collage parallax-content" aria-label="Sheer Elegance salon moments">
-          <img className="collage-left" src="https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=620&q=80" alt="Client in salon chair during a styling appointment" loading="lazy" />
-          <img className="collage-front" src="https://images.unsplash.com/photo-1620331311520-246422fd82f9?auto=format&fit=crop&w=680&q=80" alt="Hair stylist finishing a salon look" loading="lazy" />
+          <img className="collage-left" src="https://ik.imagekit.io/4lndq5ke52/sheer_elegance/hair2.jpeg?auto=format&fit=crop&w=620&q=80" alt="Client in salon chair during a styling appointment" loading="lazy" />
+          <img className="collage-front" src="https://ik.imagekit.io/4lndq5ke52/sheer_elegance/hair.jpeg?auto=format&fit=crop&w=680&q=80" alt="Hair stylist finishing a salon look" loading="lazy" />
         </div>
       </section>
 
@@ -428,7 +428,7 @@ export default function Home() {
           <p>Visit us in Lekki Phase 1 or send a message to plan your silk press, colour service, protective style or restorative treatment.</p>
         </div>
         <div className="contact-us-details">
-          <article><span>Visit</span><p>14 Admiralty Way<br />Lekki Phase 1, Lagos</p></article>
+          <article><span>Visit</span><p>14 Admiralty Way<br />Akure , Ondo</p></article>
           <article><span>Opening hours</span><p>Tue-Fri - 9am-7pm<br />Sat - 8am-6pm</p></article>
           <article><span>Talk to us</span><p>+234 810 000 2026<br />hello@sheerelegance.ng</p></article>
           <button className="button gold" onClick={() => openBooking()}>Book an appointment <span>↗</span></button>
