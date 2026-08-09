@@ -1,13 +1,62 @@
-import { env } from "cloudflare:workers";
-import { drizzle } from "drizzle-orm/d1";
-import * as schema from "./schema";
+import mysql, { type Connection, type RowDataPacket } from "mysql2/promise";
 
-export function getDb() {
-  if (!env.DB) {
-    throw new Error(
-      "Cloudflare D1 binding `DB` is unavailable. Set the `d1` field in .openai/hosting.json to `DB` or let your control plane inject the real binding values before using the database."
-    );
+type RequiredEnv =
+  | "MYSQL_HOST"
+  | "MYSQL_DATABASE"
+  | "MYSQL_USER"
+  | "MYSQL_PASSWORD"
+  | "ADMIN_SESSION_SECRET";
+
+const requiredEnv: RequiredEnv[] = [
+  "MYSQL_HOST",
+  "MYSQL_DATABASE",
+  "MYSQL_USER",
+  "MYSQL_PASSWORD",
+  "ADMIN_SESSION_SECRET",
+];
+
+function getEnv(name: RequiredEnv) {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+  return value;
+}
+
+export async function createDbConnection() {
+  for (const name of requiredEnv) {
+    getEnv(name);
   }
 
-  return drizzle(env.DB, { schema });
+  return mysql.createConnection({
+    host: getEnv("MYSQL_HOST"),
+    port: Number(process.env.MYSQL_PORT ?? 3306),
+    database: getEnv("MYSQL_DATABASE"),
+    user: getEnv("MYSQL_USER"),
+    password: getEnv("MYSQL_PASSWORD"),
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 0,
+    disableEval: true,
+  });
+}
+
+export async function queryRows<T extends RowDataPacket>(
+  sql: string,
+  values: unknown[] = [],
+) {
+  return withDbConnection(async (connection) => {
+    const [rows] = await connection.execute<T[]>(sql, values);
+    return rows;
+  });
+}
+
+export async function withDbConnection<T>(
+  callback: (connection: Connection) => Promise<T>,
+) {
+  const connection = await createDbConnection();
+  try {
+    return await callback(connection);
+  } finally {
+    await connection.end();
+  }
 }

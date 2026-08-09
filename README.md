@@ -1,100 +1,140 @@
-# vinext-starter
+# Sheer Elegance
 
-A clean full-stack starter running on
-[vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
-Drizzle support.
+Production-ready salon site and lightweight CMS for Oreoluwa Sheer Elegance.
 
-## Prerequisites
+## Requirements
 
 - Node.js `>=22.13.0`
+- MySQL `8.x` or compatible
 
-## Quick Start
+## Setup
 
 ```bash
 npm install
+copy .env.example .env
+```
+
+Fill in `.env` with the real MySQL credentials, a long random
+`ADMIN_SESSION_SECRET`, and an HTTP email provider API key.
+
+Create the database tables:
+
+```bash
+mysql -u <user> -p <database> < db/mysql-schema.sql
+```
+
+Create or update the first admin account:
+
+```bash
+npm run admin:seed -- "admin@sheerelegance.com" "replace-with-a-long-password"
+```
+
+Optional: generate only a password hash if you want to insert the admin manually:
+
+```bash
+npm run admin:hash-password -- "replace-with-a-long-password"
+```
+
+## Development
+
+```bash
 npm run dev
+```
+
+Open `/admin` to manage bookings, services and salon details.
+
+## Email Setup
+
+This app runs in a Worker-style runtime, so Gmail/SMTP socket connections are
+not supported locally. Use an HTTP email provider such as Resend or Brevo.
+
+For Resend:
+
+```env
+EMAIL_PROVIDER=resend
+RESEND_API_KEY=re_xxxxx
+MAIL_FROM="Oreoluwa Sheer Elegance <notifications@example.com>"
+ADMIN_NOTIFY_EMAIL=admin@sheerelegance.com
+SITE_URL=http://localhost:3000
+```
+
+For Brevo:
+
+```env
+EMAIL_PROVIDER=brevo
+BREVO_API_KEY=xkeysib-xxxxx
+MAIL_FROM="Oreoluwa Sheer Elegance <notifications@example.com>"
+ADMIN_NOTIFY_EMAIL=admin@sheerelegance.com
+SITE_URL=http://localhost:3000
+```
+
+When a customer books, the app sends the customer a confirmation email with the
+appointment details, salon address and logo. It also sends the admin a new
+appointment notification.
+
+## Monnify Setup
+
+The booking flow supports four payment choices:
+
+- deposit
+- 50%
+- full payment
+- pay at salon
+
+Set these Monnify values in `.env`:
+
+```env
+MONNIFY_ENV=sandbox
+MONNIFY_API_KEY=MK_TEST_xxxxx
+MONNIFY_SECRET_KEY=SK_TEST_xxxxx
+MONNIFY_CONTRACT_CODE=0000000000
+SITE_URL=http://localhost:3000
+```
+
+For production, set `MONNIFY_ENV=live`, use live credentials, set `SITE_URL`
+to the live domain, and configure the Transaction Completion webhook URL in
+Monnify as:
+
+```text
+https://your-domain.com/api/payments/monnify/webhook
+```
+
+Paid bookings are confirmed only after server-side Monnify verification returns
+`paymentStatus === "PAID"`. The receipt is attached to the customer and admin
+emails and is visible from the admin bookings list.
+
+For an existing database, run these once:
+
+```sql
+ALTER TABLE services MODIFY image_url MEDIUMTEXT NOT NULL;
+ALTER TABLE bookings
+  ADD COLUMN payment_option ENUM('deposit', 'half', 'full', 'pay_on_arrival') NOT NULL DEFAULT 'pay_on_arrival',
+  ADD COLUMN payment_status ENUM('not_required', 'pending', 'paid', 'failed') NOT NULL DEFAULT 'not_required',
+  ADD COLUMN payment_amount_naira INT UNSIGNED NOT NULL DEFAULT 0,
+  ADD COLUMN amount_paid_naira INT UNSIGNED NOT NULL DEFAULT 0,
+  ADD COLUMN payment_reference VARCHAR(190) NULL UNIQUE,
+  ADD COLUMN transaction_reference VARCHAR(190) NULL,
+  ADD COLUMN receipt_html MEDIUMTEXT NULL;
+```
+
+## Production Checks
+
+```bash
+npm run lint
 npm run build
 ```
 
-This starter does not use `wrangler.jsonc`.
+## Database-Backed Features
 
-## Included Shape
+- `/api/services` loads public service cards from MySQL.
+- `/api/bookings` saves appointment requests to MySQL.
+- `/api/availability` returns booked times for calendar availability.
+- `/api/payments/monnify/callback` verifies Monnify redirects.
+- `/api/payments/monnify/webhook` verifies Monnify payment webhooks.
+- `/api/admin/login` authenticates against the `admins` table.
+- `/api/admin/bookings` shows appointment requests in the admin page.
+- `/api/admin/services` updates the service menu.
+- `/api/admin/settings` updates salon contact details.
 
-- edit site code under `app/`
-- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
-- `vite.config.ts` simulates declared bindings for local development
-- `db/schema.ts` starts intentionally empty
-- `examples/d1/` contains an optional D1 example surface
-- `drizzle.config.ts` supports local migration generation when needed
-
-## Workspace Auth Headers
-
-Signed-in visitors receive both `oai-authenticated-user-id` and `oai-authenticated-user-email`. Private Sites require every visitor to sign in; public Sites may also have anonymous visitors, for whom neither header is present.
-
-The user ID is stable for the same user on the same Site and different across Sites. Email and name are intended for display or contact purposes.
-
-SIWC-authenticated workspace sites may also receive
-`oai-authenticated-user-full-name` when the user's SIWC profile has a non-empty
-`name` claim. The full-name value is percent-encoded UTF-8 and is accompanied by
-`oai-authenticated-user-full-name-encoding: percent-encoded-utf-8`.
-
-Treat the full name as optional and fall back to email when it is absent:
-
-```tsx
-import { headers } from "next/headers";
-
-export default async function Home() {
-  const requestHeaders = await headers();
-  const userId = requestHeaders.get("oai-authenticated-user-id");
-  const email = requestHeaders.get("oai-authenticated-user-email");
-  const encodedFullName = requestHeaders.get("oai-authenticated-user-full-name");
-  const fullName =
-    encodedFullName &&
-    requestHeaders.get("oai-authenticated-user-full-name-encoding") ===
-      "percent-encoded-utf-8"
-      ? decodeURIComponent(encodedFullName)
-      : null;
-
-  const displayName = fullName ?? email;
-  // ...
-}
-```
-
-## Optional Dispatch-Owned ChatGPT Sign-In
-
-Import the ready-to-use helpers from `app/chatgpt-auth.ts` when the site needs
-optional or required ChatGPT sign-in:
-
-- Use `getChatGPTUser()` for optional signed-in UI.
-- Use `requireChatGPTUser(returnTo)` for server-rendered pages that should send
-  anonymous visitors through Sign in with ChatGPT.
-- Use `chatGPTSignInPath(returnTo)` and `chatGPTSignOutPath(returnTo)` for
-  browser links or actions.
-- Pass a same-origin relative `returnTo` path for the destination after sign-in
-  or sign-out. The helper validates and safely encodes it.
-- Mark protected pages with `export const dynamic = "force-dynamic"` because
-  they depend on per-request identity headers.
-
-Dispatch owns `/signin-with-chatgpt`, `/signout-with-chatgpt`, `/callback`, the
-OAuth cookies, and identity header injection. Do not implement app routes for
-those reserved paths. Routes that do not import and call the helper remain
-anonymous-compatible.
-
-SIWC establishes identity only; it does not prove workspace membership. Use the
-Sites hosting platform's access policy controls for workspace-wide restrictions,
-or enforce explicit server-side membership or allowlist checks.
-
-Use SIWC for account pages, user-specific dashboards, saved records, and write
-actions tied to the current ChatGPT user. Leave public content anonymous.
-
-## Useful Commands
-
-- `npm run dev`: start local development
-- `npm run build`: verify the vinext build output
-- `npm test`: build the starter and verify its rendered loading skeleton
-- `npm run db:generate`: generate Drizzle migrations after schema changes
-
-## Learn More
-
-- [vinext Documentation](https://github.com/cloudflare/vinext)
-- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+Admin sessions are stored in signed, HTTP-only cookies. Passwords are verified
+against `scrypt:` hashes generated by `npm run admin:hash-password`.
