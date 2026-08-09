@@ -166,7 +166,6 @@ export default function AdminPage() {
           <label>Password<input name="password" type="password" required /></label>
           {loginError && <p className="admin-error">{loginError}</p>}
           <button className="button gold" type="submit">Sign in</button>
-          <small>Use an admin account from the MySQL admins table.</small>
         </form>
       </main>
     );
