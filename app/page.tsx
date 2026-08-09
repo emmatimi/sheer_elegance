@@ -384,7 +384,7 @@ export default function Home() {
           <h2>Luxury hair care with a calm, personal rhythm.</h2>
         </div>
         <div className="about-story">
-          <p>Sheer Elegance is a Lagos hair studio for clients who want beauty that still protects the health of their hair. Every appointment begins with listening: your texture, your routine, your event, your comfort, and the finish you want to live with after you leave the chair.</p>
+          <p>Sheer Elegance is an hair studio for clients who want beauty that still protects the health of their hair. Every appointment begins with listening: your texture, your routine, your event, your comfort, and the finish you want to live with after you leave the chair.</p>
           <div className="about-points">
             <span>Texture-aware styling</span>
             <span>Private consultations</span>
