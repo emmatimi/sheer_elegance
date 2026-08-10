@@ -27,6 +27,9 @@ interface ExecutionContext {
 
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    // Expose Cloudflare environment variables globally to Node.js packages
+    Object.assign(process.env, env);
+
     const url = new URL(request.url);
 
     if (url.pathname === "/_vinext/image") {
