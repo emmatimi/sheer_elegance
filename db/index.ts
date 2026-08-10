@@ -34,7 +34,7 @@ export async function createDbConnection() {
     database: getEnv("MYSQL_DATABASE"),
     user: getEnv("MYSQL_USER"),
     password: getEnv("MYSQL_PASSWORD"),
-    ssl: getEnv("MYSQL_HOST").includes("localhost") || getEnv("MYSQL_HOST").includes("127.0.0.1") ? undefined : { rejectUnauthorized: false },
+    ssl: getEnv("MYSQL_HOST").includes("localhost") || getEnv("MYSQL_HOST").includes("127.0.0.1") ? undefined : {},
     enableKeepAlive: true,
     keepAliveInitialDelay: 0,
     disableEval: true,
