@@ -26,10 +26,10 @@ function getEnv(name: RequiredEnv) {
 export async function createDbConnection() {
   // If Cloudflare Hyperdrive is bound, use its connection string!
   // This completely bypasses the Cloudflare STARTTLS limitation.
-  const hyperdrive = (process.env as any).HYPERDRIVE;
-  if (hyperdrive && hyperdrive.connectionString) {
+  const hyperdriveString = process.env.HYPERDRIVE_CONNECTION_STRING;
+  if (hyperdriveString) {
     return mysql.createConnection({
-      uri: hyperdrive.connectionString,
+      uri: hyperdriveString,
       enableKeepAlive: true,
       keepAliveInitialDelay: 0,
       disableEval: true,

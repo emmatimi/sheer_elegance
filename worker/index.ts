@@ -29,6 +29,12 @@ const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     // Expose Cloudflare environment variables globally to Node.js packages
     Object.assign(process.env, env);
+    
+    // Fix: process.env stringifies objects. We must explicitly extract the connection string
+    // from the Hyperdrive binding before it gets lost.
+    if ((env as any).HYPERDRIVE && (env as any).HYPERDRIVE.connectionString) {
+      process.env.HYPERDRIVE_CONNECTION_STRING = (env as any).HYPERDRIVE.connectionString;
+    }
 
     const url = new URL(request.url);
 
