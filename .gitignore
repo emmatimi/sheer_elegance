@@ -39,6 +39,5 @@ yarn-error.log*
 /.wrangler/
 /outputs/
 /work/
-
 # Ignore sensitive migration scripts
 scripts/migrate-to-aiven.mjs
