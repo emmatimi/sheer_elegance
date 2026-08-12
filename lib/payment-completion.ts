@@ -10,6 +10,9 @@ export async function completePaidBooking(paymentReference: string) {
 
   const booking = await getBookingByPaymentReference(paymentReference);
   if (!booking) throw new Error("Booking not found");
+  if (booking.paymentStatus === "paid" && booking.receiptHtml) {
+    return { alreadyCompleted: true };
+  }
 
   const settings = await getSalonSettings();
   const paidBooking = {
@@ -31,4 +34,6 @@ export async function completePaidBooking(paymentReference: string) {
     booking: { ...paidBooking, receiptHtml, status: "confirmed" },
     settings,
   });
+
+  return { alreadyCompleted: false };
 }

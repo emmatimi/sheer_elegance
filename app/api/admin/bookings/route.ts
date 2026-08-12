@@ -1,4 +1,4 @@
-import { getBookings } from "@/db/salon";
+import { getBookingsPage } from "@/db/salon";
 import { requireAdminSession } from "@/lib/admin-auth";
 
 export async function GET(request: Request) {
@@ -6,7 +6,10 @@ export async function GET(request: Request) {
   if (session instanceof Response) return session;
 
   try {
-    return Response.json({ bookings: await getBookings() });
+    const url = new URL(request.url);
+    const page = Number(url.searchParams.get("page") ?? 1);
+    const pageSize = Number(url.searchParams.get("pageSize") ?? 10);
+    return Response.json(await getBookingsPage(page, pageSize));
   } catch (error) {
     return Response.json(
       { error: error instanceof Error ? error.message : "Unable to load bookings" },

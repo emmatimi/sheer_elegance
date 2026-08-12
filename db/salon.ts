@@ -91,6 +91,10 @@ type BookedTimeRow = RowDataPacket & {
   appointment_time: string;
 };
 
+type CountRow = RowDataPacket & {
+  total: number;
+};
+
 export async function getServices() {
   const rows = await queryRows<ServiceRow>(
     `SELECT id, name, slug, category, price_naira, duration_minutes, image_url,
@@ -267,6 +271,40 @@ export async function getBookings() {
   );
 
   return rows.map(toBooking);
+}
+
+export async function getBookingsPage(page = 1, pageSize = 10) {
+  const safePage = Math.max(1, Math.floor(page));
+  const safePageSize = Math.min(50, Math.max(1, Math.floor(pageSize)));
+  const offset = (safePage - 1) * safePageSize;
+
+  const [countRow] = await queryRows<CountRow>(
+    `SELECT COUNT(*) AS total FROM bookings`,
+  );
+  const rows = await queryRows<BookingRow>(
+    `SELECT bookings.id, bookings.service_id, services.name AS service_name,
+      bookings.stylist_name, bookings.customer_name, bookings.customer_phone,
+      bookings.customer_email, bookings.appointment_date, bookings.appointment_time,
+      bookings.payment_option, bookings.payment_status, bookings.payment_amount_naira,
+      bookings.amount_paid_naira, bookings.payment_reference, bookings.transaction_reference,
+      bookings.receipt_html, bookings.status, bookings.notes, bookings.created_at
+     FROM bookings
+     INNER JOIN services ON services.id = bookings.service_id
+     ORDER BY bookings.created_at DESC, bookings.id DESC
+     LIMIT ? OFFSET ?`,
+    [safePageSize, offset],
+  );
+
+  const total = Number(countRow?.total ?? 0);
+  return {
+    bookings: rows.map(toBooking),
+    pagination: {
+      page: safePage,
+      pageSize: safePageSize,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / safePageSize)),
+    },
+  };
 }
 
 export async function getBookingByPaymentReference(paymentReference: string) {

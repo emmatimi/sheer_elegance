@@ -1,5 +1,3 @@
-import { completePaidBooking } from "@/lib/payment-completion";
-
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const paymentReference =
@@ -10,12 +8,7 @@ export async function GET(request: Request) {
     return redirectToSite("/?payment=missing-reference");
   }
 
-  try {
-    await completePaidBooking(paymentReference);
-    return redirectToSite("/?payment=success");
-  } catch {
-    return redirectToSite("/?payment=failed");
-  }
+  return redirectToSite("/?payment=pending-confirmation");
 }
 
 function redirectToSite(path: string) {
