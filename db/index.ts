@@ -139,7 +139,7 @@ export async function queryRows<T extends RowDataPacket>(
   values: unknown[] = [],
 ) {
   return withDbConnection(async (connection) => {
-    const [rows] = await connection.execute<T[]>(sql, values);
+    const [rows] = await connection.query<T[]>(sql, values);
     return rows;
   });
 }

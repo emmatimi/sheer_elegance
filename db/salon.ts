@@ -107,7 +107,7 @@ export async function saveServices(services: Service[]) {
     try {
       await connection.beginTransaction();
       for (const service of services) {
-        await connection.execute(
+        await connection.query(
           `UPDATE services
            SET name = ?, slug = ?, category = ?,
              price_naira = ?, duration_minutes = ?,
@@ -163,7 +163,7 @@ export async function saveSalonSettings(settings: SalonSettings) {
   ];
 
   await withDbConnection(async (connection) =>
-    connection.execute(
+    connection.query(
       `INSERT INTO salon_settings (setting_key, setting_value)
        VALUES ${entries.map(() => "(?, ?)").join(", ")}
        ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`,
@@ -188,7 +188,7 @@ export async function createBooking(input: {
   notes?: string;
 }) {
   const [result] = await withDbConnection(async (connection) =>
-    connection.execute(
+    connection.query(
       `INSERT INTO bookings (
         service_id, stylist_name, customer_name, customer_phone, customer_email,
         appointment_date, appointment_time, payment_option, payment_status,
@@ -294,7 +294,7 @@ export async function markBookingPaid(input: {
   receiptHtml: string;
 }) {
   await withDbConnection(async (connection) =>
-    connection.execute(
+    connection.query(
       `UPDATE bookings
        SET payment_status = 'paid',
          amount_paid_naira = ?,
