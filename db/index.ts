@@ -1,4 +1,13 @@
 import mysql, { type Connection, type RowDataPacket } from "mysql2/promise";
+import { env } from "cloudflare:workers";
+
+type HyperdriveBinding = {
+  host: string;
+  port: number;
+  database: string;
+  user: string;
+  password: string;
+};
 
 type RequiredEnv =
   | "MYSQL_HOST"
@@ -24,12 +33,14 @@ function getEnv(name: RequiredEnv) {
 }
 
 export async function createDbConnection() {
-  // If Cloudflare Hyperdrive is bound, use its connection string!
-  // This completely bypasses the Cloudflare STARTTLS limitation.
-  const hyperdriveString = process.env.HYPERDRIVE_CONNECTION_STRING;
-  if (hyperdriveString) {
+  const hyperdrive = (env as { HYPERDRIVE?: HyperdriveBinding }).HYPERDRIVE;
+  if (hyperdrive) {
     return mysql.createConnection({
-      uri: hyperdriveString,
+      host: hyperdrive.host,
+      port: hyperdrive.port,
+      database: hyperdrive.database,
+      user: hyperdrive.user,
+      password: hyperdrive.password,
       enableKeepAlive: true,
       keepAliveInitialDelay: 0,
       disableEval: true,
