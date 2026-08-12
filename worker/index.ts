@@ -5,6 +5,13 @@ import handler from "vinext/server/app-router-entry";
 interface Env {
   ASSETS: Fetcher;
   DB: D1Database;
+  HYPERDRIVE?: {
+    host: string;
+    port: number;
+    database: string;
+    user: string;
+    password: string;
+  };
   IMAGES: {
     input(stream: ReadableStream): {
       transform(options: Record<string, unknown>): {
@@ -27,13 +34,10 @@ interface ExecutionContext {
 
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    // Expose Cloudflare environment variables globally to Node.js packages
-    Object.assign(process.env, env);
-    
-    // Fix: process.env stringifies objects. We must explicitly extract the connection string
-    // from the Hyperdrive binding before it gets lost.
-    if ((env as any).HYPERDRIVE && (env as any).HYPERDRIVE.connectionString) {
-      process.env.HYPERDRIVE_CONNECTION_STRING = (env as any).HYPERDRIVE.connectionString;
+    for (const [key, value] of Object.entries(env)) {
+      if (typeof value === "string") {
+        process.env[key] = value;
+      }
     }
 
     const url = new URL(request.url);
