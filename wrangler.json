@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sheer-elegance",
+  "compatibility_date": "2026-05-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "e459efa85f7f4305a68bba6885e91ecb"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}
