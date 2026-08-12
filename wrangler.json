@@ -5,7 +5,8 @@
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",
-      "id": "e459efa85f7f4305a68bba6885e91ecb"
+      "id": "e459efa85f7f4305a68bba6885e91ecb",
+      "localConnectionString": "mysql://root:root@127.0.0.1:3306/sheer_elegance"
     }
   ],
   "observability": {

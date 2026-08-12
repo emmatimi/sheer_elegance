@@ -111,26 +111,37 @@ export async function saveServices(services: Service[]) {
     try {
       await connection.beginTransaction();
       for (const service of services) {
-        await connection.query(
-          `UPDATE services
-           SET name = ?, slug = ?, category = ?,
-             price_naira = ?, duration_minutes = ?,
-             image_url = ?, short_description = ?,
-             is_featured = ?, sort_order = ?
-           WHERE id = ?`,
-          [
-            service.name,
-            service.slug,
-            service.category,
-            service.priceNaira,
-            service.durationMinutes,
-            service.imageUrl,
-            service.shortDescription,
-            service.isFeatured ? 1 : 0,
-            service.sortOrder,
-            service.id,
-          ],
-        );
+        const values = [
+          service.name,
+          service.slug,
+          service.category,
+          service.priceNaira,
+          service.durationMinutes,
+          service.imageUrl,
+          service.shortDescription,
+          service.isFeatured ? 1 : 0,
+          service.sortOrder,
+        ];
+
+        if (service.id > 0) {
+          await connection.query(
+            `UPDATE services
+             SET name = ?, slug = ?, category = ?,
+               price_naira = ?, duration_minutes = ?,
+               image_url = ?, short_description = ?,
+               is_featured = ?, sort_order = ?
+             WHERE id = ?`,
+            [...values, service.id],
+          );
+        } else {
+          await connection.query(
+            `INSERT INTO services (
+              name, slug, category, price_naira, duration_minutes,
+              image_url, short_description, is_featured, sort_order
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            values,
+          );
+        }
       }
       await connection.commit();
     } catch (error) {
@@ -273,13 +284,23 @@ export async function getBookings() {
   return rows.map(toBooking);
 }
 
-export async function getBookingsPage(page = 1, pageSize = 10) {
+export async function getBookingsPage(page = 1, pageSize = 10, appointmentDate?: string) {
   const safePage = Math.max(1, Math.floor(page));
   const safePageSize = Math.min(50, Math.max(1, Math.floor(pageSize)));
   const offset = (safePage - 1) * safePageSize;
+  const filters: string[] = [];
+  const values: unknown[] = [];
+
+  if (appointmentDate) {
+    filters.push("bookings.appointment_date = ?");
+    values.push(appointmentDate);
+  }
+
+  const whereClause = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
 
   const [countRow] = await queryRows<CountRow>(
-    `SELECT COUNT(*) AS total FROM bookings`,
+    `SELECT COUNT(*) AS total FROM bookings ${whereClause}`,
+    values,
   );
   const rows = await queryRows<BookingRow>(
     `SELECT bookings.id, bookings.service_id, services.name AS service_name,
@@ -290,9 +311,10 @@ export async function getBookingsPage(page = 1, pageSize = 10) {
       bookings.receipt_html, bookings.status, bookings.notes, bookings.created_at
      FROM bookings
      INNER JOIN services ON services.id = bookings.service_id
+     ${whereClause}
      ORDER BY bookings.created_at DESC, bookings.id DESC
      LIMIT ? OFFSET ?`,
-    [safePageSize, offset],
+    [...values, safePageSize, offset],
   );
 
   const total = Number(countRow?.total ?? 0);

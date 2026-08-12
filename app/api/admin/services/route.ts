@@ -42,7 +42,7 @@ function parseServices(payload: unknown): Service[] {
     const durationMinutes = Number(item.durationMinutes);
     const sortOrder = Number(item.sortOrder);
 
-    if (!Number.isInteger(id) || id < 1) throw new Error("Service id is invalid");
+    if (!Number.isInteger(id)) throw new Error("Service id is invalid");
     if (!Number.isInteger(priceNaira) || priceNaira < 0) {
       throw new Error("Service price must be a whole number");
     }
