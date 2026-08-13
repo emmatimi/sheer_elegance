@@ -5,7 +5,7 @@ export async function GET(request: Request) {
   const session = requireAdminSession(request);
   if (session instanceof Response) return session;
 
-  return Response.json({ services: await getServices() });
+  return noStoreJson({ services: await getServices() });
 }
 
 export async function PUT(request: Request) {
@@ -16,7 +16,7 @@ export async function PUT(request: Request) {
     const payload = await request.json();
     const services = parseServices(payload);
     await saveServices(services);
-    return Response.json({ services: await getServices() });
+    return noStoreJson({ services: await getServices() });
   } catch (error) {
     return Response.json(
       { error: error instanceof Error ? error.message : "Unable to save services" },
@@ -34,11 +34,11 @@ export async function DELETE(request: Request) {
     const id = Number(url.searchParams.get("id"));
     if (!Number.isInteger(id) || id < 1) throw new Error("Valid service id is required");
     await deleteService(id);
-    return Response.json({ services: await getServices() });
+    return noStoreJson({ services: await getServices() });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to delete service";
     return Response.json(
-      { error: message.includes("foreign key") ? "This service already has bookings, so it cannot be deleted." : message },
+      { error: message.includes("foreign key") ? "This service already has bookings, so it cannot be deleted. You can rename it or edit it instead." : message },
       { status: 400 },
     );
   }
@@ -82,4 +82,10 @@ function requiredString(value: unknown, field: string) {
     throw new Error(`${field} is required`);
   }
   return value.trim();
+}
+
+function noStoreJson(payload: unknown, init?: ResponseInit) {
+  const headers = new Headers(init?.headers);
+  headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  return Response.json(payload, { ...init, headers });
 }

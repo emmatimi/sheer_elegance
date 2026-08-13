@@ -1,4 +1,4 @@
-import type { RowDataPacket } from "mysql2";
+import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import { queryRows, withDbConnection } from "./index";
 
 export type Service = {
@@ -237,9 +237,10 @@ export async function saveServices(services: Service[]) {
 }
 
 export async function deleteService(id: number) {
-  await withDbConnection(async (connection) =>
-    connection.query(`DELETE FROM services WHERE id = ?`, [id]),
-  );
+  await withDbConnection(async (connection) => {
+    const [result] = await connection.query<ResultSetHeader>(`DELETE FROM services WHERE id = ?`, [id]);
+    if (result.affectedRows === 0) throw new Error("Service was not found or has already been deleted.");
+  });
 }
 
 export async function getSalonSettings(): Promise<SalonSettings> {

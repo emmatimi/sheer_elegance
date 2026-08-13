@@ -84,6 +84,11 @@ export default function Home() {
   const [bookedTimes, setBookedTimes] = useState<Record<string, string[]>>({});
   const [hairstyles, setHairstyles] = useState<Hairstyle[]>([]);
   const [selectedHairstyle, setSelectedHairstyle] = useState<Hairstyle | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -441,10 +446,13 @@ export default function Home() {
           <p className="contact-lead">Book a chair for a thoughtful consultation, healthy styling, silk press, colour refresh, protective install or restorative treatment tailored to your hair.</p>
           <a className="read-more-button" href="/book">Reserve your chair</a>
         </div>
-        <div className="contact-collage parallax-content" aria-label="Sheer Elegance salon moments">
-          <img className="collage-left" src="https://ik.imagekit.io/4lndq5ke52/sheer_elegance/salon.jpg?auto=format&fit=crop&w=620&q=80" alt="Client in salon chair during a styling appointment" loading="lazy" />
-          <img className="collage-front" src="https://ik.imagekit.io/4lndq5ke52/sheer_elegance/equip.jpg?auto=format&fit=crop&w=680&q=80" alt="Hair stylist finishing a salon look" loading="lazy" />
-        
+        <div className="contact-collage parallax-content" aria-label="Sheer Elegance salon moments" suppressHydrationWarning>
+          {hydrated && (
+            <>
+              <img className="collage-left" src="https://ik.imagekit.io/4lndq5ke52/sheer_elegance/salon.jpg?auto=format&fit=crop&w=620&q=80" alt="Client in salon chair during a styling appointment" loading="lazy" />
+              <img className="collage-front" src="https://ik.imagekit.io/4lndq5ke52/sheer_elegance/equip.jpg?auto=format&fit=crop&w=680&q=80" alt="Hair stylist finishing a salon look" loading="lazy" />
+            </>
+          )}
         </div>
       </section>
 
@@ -592,6 +600,5 @@ function paymentAmountFor(
   if (option === "full") return priceNaira;
   return 0;
 }
-
 
 

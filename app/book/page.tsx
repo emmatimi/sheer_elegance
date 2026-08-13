@@ -207,27 +207,9 @@ export default function BookPage() {
 
       <section className="booking-page-shell">
         <aside className="booking-page-intro">
-          <div className="booking-concierge-top">
-            <span>Private chair</span>
-            <strong>Salon concierge</strong>
-          </div>
-          <div className="booking-concierge-copy">
-            <p className="eyebrow hero-accent">Before you arrive</p>
-            <h2>Your visit, planned beautifully.</h2>
-            <p>We use your chosen service, timing and any hairstyle reference to prepare a calm appointment experience before you sit in the chair.</p>
-          </div>
-          <div className="booking-concierge-grid">
-            <div><span>When</span><strong>{date}</strong><small>{time}</small></div>
-            <div><span>Reference</span><strong>{selectedHairstyle ? "Attached" : "Optional"}</strong><small>{selectedHairstyle ? selectedHairstyle.name : "Choose from gallery"}</small></div>
-            <div><span>Confirmation</span><strong>Email copy</strong><small>Sent after booking</small></div>
-          </div>
-          <div className="booking-prep-card">
-            <span>Before you arrive</span>
-            <ul>
-              <li>Bring your inspiration photo or choose from our hairstyle library.</li>
-              <li>Arrive with hair gently detangled unless your service includes prep.</li>
-              <li>Your confirmation email will include appointment and payment details.</li>
-            </ul>
+          <div className="booking-arrival-card">
+            <span>Oreoluwa Sheer Elegance</span>
+            <h2>We await your arrival</h2>
           </div>
         </aside>
 
@@ -329,5 +311,4 @@ function formatDuration(minutes: number) {
   if (!hours) return `${rest} min`;
   return rest ? `${hours} hrs ${rest} min` : `${hours} hrs`;
 }
-
 
