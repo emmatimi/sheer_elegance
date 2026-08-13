@@ -55,6 +55,7 @@ type BookingRecord = {
   hairstyleCategory: string | null;
   hairstyleImageUrl: string | null;
   hairstyleDescription: string | null;
+  notes: string | null;
   status: string;
   createdAt: string;
 };
@@ -82,12 +83,13 @@ const serviceGuide = [
   ["Relaxed and straight hair styling", "silk press, blow-dry and straightening, roller sets, wrap styling, curls, waves and sleek styling."],
   ["Loc services", "starter locs, retwisting, loc styling, interlocking, faux locs, butterfly locs, soft locs and loc extensions."],
   ["Bridal and occasion styling", "bridal updos, bridesmaid hairstyles, traditional wedding hairstyles, birthday hairstyles, prom styling, formal updos and hair-accessory installation."],
-  ["Childrenâ€™s hairstyling", "kidsâ€™ cornrows, braids, beads, twists, ponytails and natural protective styles."],
+  ["Children’s hairstyling", "kids’ cornrows, braids, beads, twists, ponytails and natural protective styles."],
   ["Hair preparation and finishing", "washing, conditioning, detangling, blow-drying, trimming, edge styling, hair treatment and scalp treatment."],
 ];
 
 export function AdminDashboard({ section }: { section: AdminSection }) {
   const [activeSection, setActiveSection] = useState<AdminSection>(section);
+  const [adminMenuOpen, setAdminMenuOpen] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
   const [loggedIn, setLoggedIn] = useState(false);
   const [loginError, setLoginError] = useState("");
@@ -103,6 +105,9 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
   const [savingHairstyleId, setSavingHairstyleId] = useState<number | null>(null);
   const [savingSettings, setSavingSettings] = useState(false);
   const [bookingDate, setBookingDate] = useState("");
+  const [hairstyleSearch, setHairstyleSearch] = useState("");
+  const [hairstyleCategoryFilter, setHairstyleCategoryFilter] = useState("all");
+  const [hairstylePage, setHairstylePage] = useState(1);
   const [serviceModalOpen, setServiceModalOpen] = useState(false);
   const [hairstyleModalOpen, setHairstyleModalOpen] = useState(false);
   const [editingServices, setEditingServices] = useState<Record<number, ServiceRecord>>({});
@@ -111,6 +116,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
   const [hairstyleModalImageUrl, setHairstyleModalImageUrl] = useState("");
   const [previewImageUrl, setPreviewImageUrl] = useState("");
   const [pendingDelete, setPendingDelete] = useState<{ type: "service" | "hairstyle"; id: number } | null>(null);
+  const hairstylePageSize = 8;
 
   useEffect(() => {
     setActiveSection(section);
@@ -130,6 +136,10 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
     if (activeSection === "hairstyles") void loadHairstyles();
     if (activeSection === "settings") void loadSettings();
   }, [loggedIn, activeSection, bookingDate]);
+
+  useEffect(() => {
+    setHairstylePage(1);
+  }, [hairstyleSearch, hairstyleCategoryFilter]);
 
   async function loadBookings(page = pagination.page) {
     const dateQuery = bookingDate ? `&date=${encodeURIComponent(bookingDate)}` : "";
@@ -204,6 +214,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
     event.preventDefault();
     setStatus("");
     setActiveSection(nextSection);
+    setAdminMenuOpen(false);
     setPendingDelete(null);
     window.history.pushState(null, "", `/admin/${nextSection}`);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -360,7 +371,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
     if (!service) return;
     if (pendingDelete?.type !== "service" || pendingDelete.id !== serviceId) {
       setPendingDelete({ type: "service", id: serviceId });
-      setStatus(`Warning: confirm delete for "${service.name}".`);
+      setStatus("");
       return;
     }
     setStatus("");
@@ -488,7 +499,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
     if (!hairstyle) return;
     if (pendingDelete?.type !== "hairstyle" || pendingDelete.id !== hairstyleId) {
       setPendingDelete({ type: "hairstyle", id: hairstyleId });
-      setStatus(`Warning: confirm delete for "${hairstyle.name}".`);
+      setStatus("");
       return;
     }
     setStatus("");
@@ -532,6 +543,18 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
     hairstyles: "Hairstyles",
     settings: "Salon details",
   })[activeSection], [activeSection]);
+  const hairstyleCategories = useMemo(() => Array.from(new Set(hairstyles.map((item) => item.category).filter(Boolean))), [hairstyles]);
+  const filteredHairstyles = useMemo(() => {
+    const query = hairstyleSearch.trim().toLowerCase();
+    return hairstyles.filter((item) => {
+      const matchesCategory = hairstyleCategoryFilter === "all" || item.category === hairstyleCategoryFilter;
+      const matchesSearch = !query || `${item.name} ${item.category} ${item.tags.join(" ")}`.toLowerCase().includes(query);
+      return matchesCategory && matchesSearch;
+    });
+  }, [hairstyleCategoryFilter, hairstyleSearch, hairstyles]);
+  const hairstyleTotalPages = Math.max(1, Math.ceil(filteredHairstyles.length / hairstylePageSize));
+  const safeHairstylePage = Math.min(hairstylePage, hairstyleTotalPages);
+  const visibleHairstyles = filteredHairstyles.slice((safeHairstylePage - 1) * hairstylePageSize, safeHairstylePage * hairstylePageSize);
 
   if (checkingSession) {
     return <main className="admin-shell login-shell"><p>Checking admin session</p></main>;
@@ -554,8 +577,19 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
 
   return (
     <main className="admin-shell">
-      <aside className="admin-sidebar">
-        <a href="/" className="admin-brand">Oreoluwa<br /><span>Sheer Elegance</span></a>
+      <div className="admin-mobile-bar">
+        <a href="/" className="admin-brand" aria-label="Oreoluwa Sheer Elegance home">
+          <img src="/sheer-elegance-logo.png" alt="Oreoluwa Sheer Elegance" />
+        </a>
+        <button type="button" aria-label="Toggle admin menu" aria-expanded={adminMenuOpen} onClick={() => setAdminMenuOpen((open) => !open)}>
+          <span />
+          <span />
+        </button>
+      </div>
+      <aside className={adminMenuOpen ? "admin-sidebar open" : "admin-sidebar"}>
+        <a href="/" className="admin-brand" aria-label="Oreoluwa Sheer Elegance home">
+          <img src="/sheer-elegance-logo.png" alt="Oreoluwa Sheer Elegance" />
+        </a>
         <nav>
           <a className={activeSection === "bookings" ? "active" : ""} href="/admin/bookings" onClick={(event) => openSection(event, "bookings")}>Bookings</a>
           <a className={activeSection === "services" ? "active" : ""} href="/admin/services" onClick={(event) => openSection(event, "services")}>Services</a>
@@ -589,22 +623,26 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
               {bookings.length ? bookings.map((booking) => (
                 <article key={booking.id}>
                   <div className="booking-main">
-                    <p>{booking.appointmentDate} Â· {booking.appointmentTime}</p>
+                    <p>{booking.appointmentDate} · {booking.appointmentTime}</p>
                     <h3>{booking.customerName}</h3>
                     <span>{booking.serviceName}</span>
-                    {booking.hairstyleName && <span>Inspired by: {booking.hairstyleName}</span>}
-                    <span>{booking.customerPhone} Â· {booking.customerEmail}</span>
-                  </div>
-                  <div className="booking-meta">
-                    <span className="status-pill">{booking.status}</span>
-                    <span>{paymentLabel(booking)}</span>
-                    {booking.paymentStatus !== "not_required" && <span>Payment: {booking.paymentStatus}</span>}
-                    {booking.paymentReference && <span>Ref: {booking.paymentReference}</span>}
-                    {booking.transactionReference && <span>Txn: {booking.transactionReference}</span>}
-                    {booking.hairstyleImageUrl && <a href={booking.hairstyleImageUrl} target="_blank" rel="noreferrer">View hairstyle reference</a>}
-                    {booking.receiptHtml
-                      ? <a href={downloadReceiptUrl(booking)} download={`receipt-${booking.id}.html`}>Download receipt</a>
-                      : <span>No receipt yet</span>}
+                    {booking.hairstyleName && (
+                      <div className="booking-hairstyle-reference">
+                        {booking.hairstyleImageUrl && (
+                          <button type="button" onClick={() => setPreviewImageUrl(booking.hairstyleImageUrl ?? "")} aria-label={`View ${booking.hairstyleName} hairstyle reference`}>
+                            <img src={booking.hairstyleImageUrl} alt={`${booking.hairstyleName} hairstyle reference`} />
+                          </button>
+                        )}
+                        <div>
+                          <strong>Hairstyle chosen</strong>
+                          <span>{booking.hairstyleName}</span>
+                          {booking.hairstyleCategory && <small>{booking.hairstyleCategory}</small>}
+                          {booking.hairstyleDescription && <p>{booking.hairstyleDescription}</p>}
+                        </div>
+                      </div>
+                    )}
+                    <span>{booking.customerPhone} · {booking.customerEmail}</span>
+                    {booking.notes && <span>Note: {booking.notes}</span>}
                   </div>
                 </article>
               )) : <p>No bookings yet.</p>}
@@ -661,7 +699,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
                     <div className="admin-service-fields">
                       <div className="admin-service-card-head wide">
                         <div>
-                          <p>Service #{index + 1} Â· {service.slug}</p>
+                            <p>Service #{index + 1} · {service.slug}</p>
                           <h3>{service.name}</h3>
                         </div>
                         {isEditing ? (
@@ -738,8 +776,13 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
                 <button className="button ghost" type="button" onClick={() => setHairstyleModalOpen(true)}>Add hairstyle</button>
               </div>
             </div>
-            <div className="admin-service-list">
-              {hairstyles.map((hairstyle, index) => {
+            <div className="admin-filter-bar admin-hairstyle-filter">
+              <label>Search hairstyles<input value={hairstyleSearch} onChange={(event) => setHairstyleSearch(event.target.value)} placeholder="Search by name, tag or category" /></label>
+              <label>Filter by service<select value={hairstyleCategoryFilter} onChange={(event) => setHairstyleCategoryFilter(event.target.value)}><option value="all">All services</option>{hairstyleCategories.map((category) => <option key={category} value={category}>{category}</option>)}</select></label>
+              <span>{filteredHairstyles.length} total</span>
+            </div>
+            <div className="admin-service-list admin-hairstyle-list">
+              {visibleHairstyles.map((hairstyle) => {
                 const draft = editingHairstyles[hairstyle.id];
                 const editableHairstyle = draft ?? hairstyle;
                 const isEditing = Boolean(draft);
@@ -769,7 +812,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
                       <div className="admin-service-fields">
                         <div className="admin-service-card-head wide">
                           <div>
-                            <p>#{index + 1} Â· {hairstyle.category}</p>
+                            <p>{hairstyle.category}</p>
                             <h3>{hairstyle.name}</h3>
                           </div>
                           {isEditing ? (
@@ -808,6 +851,12 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
                   </article>
                 );
               })}
+              {!visibleHairstyles.length && <p>No hairstyles match this filter.</p>}
+            </div>
+            <div className="admin-pagination">
+              <button disabled={safeHairstylePage <= 1} onClick={() => setHairstylePage((page) => Math.max(1, page - 1))}>Previous</button>
+              <span>Page {safeHairstylePage} of {hairstyleTotalPages}</span>
+              <button disabled={safeHairstylePage >= hairstyleTotalPages} onClick={() => setHairstylePage((page) => Math.min(hairstyleTotalPages, page + 1))}>Next</button>
             </div>
           </section>
         )}
@@ -843,7 +892,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
                 <p className="eyebrow dark">New service</p>
                 <h2 id="add-service-title">Add salon service</h2>
               </div>
-              <button type="button" onClick={() => setServiceModalOpen(false)}>Ã—</button>
+              <button type="button" onClick={() => setServiceModalOpen(false)}>Close</button>
             </div>
             <div className="admin-modal-grid">
               <label className="wide">Service name<input name="name" required placeholder="Silk press and trim" /></label>
@@ -879,7 +928,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
                 <p className="eyebrow dark">New hairstyle</p>
                 <h2 id="add-hairstyle-title">Add hairstyle</h2>
               </div>
-              <button type="button" onClick={() => setHairstyleModalOpen(false)}>Ã—</button>
+              <button type="button" onClick={() => setHairstyleModalOpen(false)}>Close</button>
             </div>
             <div className="admin-modal-grid">
               <label className="wide">Hairstyle name<input name="name" required placeholder="Soft stitch cornrows" /></label>
@@ -911,7 +960,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
         <div className="admin-modal image-viewer" role="dialog" aria-modal="true" aria-label="Service image preview">
           <button className="admin-modal-backdrop" type="button" aria-label="Close image preview" onClick={() => setPreviewImageUrl("")} />
           <div className="admin-image-viewer-card">
-            <button type="button" onClick={() => setPreviewImageUrl("")}>Ã—</button>
+            <button type="button" onClick={() => setPreviewImageUrl("")}>x</button>
             <img src={previewImageUrl} alt="Service preview" />
           </div>
         </div>
@@ -931,26 +980,12 @@ function toListItems(value: string) {
     .filter(Boolean);
 }
 
-function paymentLabel(booking: BookingRecord) {
-  if (booking.paymentOption === "pay_on_arrival") return "Pay at salon";
-  const amount = booking.amountPaidNaira || booking.paymentAmountNaira;
-  return `${booking.paymentOption.replaceAll("_", " ")} ${formatNaira(amount)}`;
-}
-
-function formatNaira(value: number) {
-  return `NGN ${new Intl.NumberFormat("en-NG").format(value)}`;
-}
-
 function formatDuration(totalMinutes: number) {
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
   if (hours && minutes) return `${hours} hr ${minutes} min`;
   if (hours) return `${hours} hr`;
   return `${minutes} min`;
-}
-
-function downloadReceiptUrl(booking: BookingRecord) {
-  return `data:text/html;charset=utf-8,${encodeURIComponent(booking.receiptHtml ?? "")}`;
 }
 
 function slugify(value: string) {
@@ -960,7 +995,6 @@ function slugify(value: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
 }
-
 
 
 

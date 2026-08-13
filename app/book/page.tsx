@@ -28,7 +28,7 @@ export default function BookPage() {
   const [date, setDate] = useState(todayIso);
   const [time, setTime] = useState(times[1]);
   const [paymentOption] = useState<PaymentOption>("pay_on_arrival");
-  const [details, setDetails] = useState({ name: "", phone: "", email: "" });
+  const [details, setDetails] = useState({ name: "", phone: "", email: "", notes: "" });
   const [confirmed, setConfirmed] = useState(false);
   const [bookingError, setBookingError] = useState("");
   const [bookedTimes, setBookedTimes] = useState<Record<string, string[]>>({});
@@ -146,6 +146,7 @@ export default function BookPage() {
         appointmentDate: date,
         appointmentTime: time,
         paymentOption,
+        notes: details.notes,
         hairstyle: selectedHairstyle ? {
           name: selectedHairstyle.name,
           category: selectedHairstyle.category,
@@ -219,18 +220,24 @@ export default function BookPage() {
             <div className="stepper">{(selectedHairstyle ? [2, 3, 4] : [1, 2, 3, 4]).map((n, index) => <span key={n} className={step >= n ? "active" : ""}>{index + 1}</span>)}</div>
             {step === 1 && <div className="booking-step"><p className="step-label">01 - Choose your service</p><div className="option-list">{availableServices.map((item) => <button key={item.name} className={service === item.name ? "selected" : ""} onClick={() => setService(item.name)}><span><b>{item.name}</b><small>{item.category}</small></span></button>)}</div></div>}
             {step === 2 && <div className="booking-step"><p className="step-label">{selectedHairstyle ? "01" : "02"} - Select a date and time</p>{selectedHairstyle && <div className="selected-look-summary"><img src={selectedHairstyle.imageUrl} alt="" /><div><span>Selected look</span><strong>{selectedHairstyle.name}</strong><p>{selectedHairstyle.category}</p></div></div>}<div className="calendar-grid">{calendarDays.map((day) => <button key={day.iso} disabled={day.disabled} className={date === day.iso ? "selected" : ""} onClick={() => chooseDate(day)}><span>{day.weekday}</span><strong>{day.day}</strong></button>)}</div><div className="time-grid">{times.map((item) => <button key={item} disabled={bookedTimes[date]?.includes(item)} className={time === item ? "selected" : ""} onClick={() => { setBookingError(""); setTime(item); }}>{item}</button>)}</div>{availableTimes.length === 0 && <p className="admin-error">This day is fully booked. Please choose another date.</p>}{bookingError && <p className="admin-error">{bookingError}</p>}</div>}
-            {step === 3 && <form className="booking-step details-form" id="details-form" onSubmit={(event) => { event.preventDefault(); setStep(4); }}><p className="step-label">03 - Your details</p><label>Full name<input required value={details.name} onChange={(event) => setDetails({ ...details, name: event.target.value })} placeholder="Ada Okafor" /></label><label>Phone number<input required type="tel" value={details.phone} onChange={(event) => setDetails({ ...details, phone: event.target.value })} placeholder="+234 800 000 0000" /></label><label>Email address<input required type="email" value={details.email} onChange={(event) => setDetails({ ...details, email: event.target.value })} placeholder="you@example.com" /></label></form>}
+            {step === 3 && <form className="booking-step details-form" id="details-form" onSubmit={(event) => { event.preventDefault(); setStep(4); }}><p className="step-label">03 - Your details</p><label>Full name<input required value={details.name} onChange={(event) => setDetails({ ...details, name: event.target.value })} placeholder="Ada Okafor" /></label><label>Phone number<input required type="tel" value={details.phone} onChange={(event) => setDetails({ ...details, phone: event.target.value })} placeholder="+234 800 000 0000" /></label><label>Email address<input required type="email" value={details.email} onChange={(event) => setDetails({ ...details, email: event.target.value })} placeholder="you@example.com" /></label><label className="wide">Optional note<textarea value={details.notes} onChange={(event) => setDetails({ ...details, notes: event.target.value })} placeholder="Tell us anything useful before your visit." /></label></form>}
             {step === 4 && <form className="booking-step summary" onSubmit={submitBooking}>
               <p className="step-label">04 - Payment and confirmation</p>
               <div><span>Service</span><strong>{selectedService.name}</strong></div>
-              {selectedHairstyle && <div><span>Hairstyle inspiration</span><strong>{selectedHairstyle.name}</strong><small>{selectedHairstyle.category}</small></div>}
-              <div><span>When</span><strong>{date} - {time}</strong></div>
+              {selectedHairstyle && <div><span>Hairstyle</span><strong>{selectedHairstyle.name}</strong></div>}
+              {selectedHairstyle && <div><span>Category</span><strong>{selectedHairstyle.category}</strong></div>}
+              <div><span>Date</span><strong>{date}</strong></div>
+              <div><span>Time</span><strong>{time}</strong></div>
+              <div><span>Name</span><strong>{details.name}</strong></div>
+              <div><span>Phone</span><strong>{details.phone}</strong></div>
+              <div><span>Email</span><strong>{details.email}</strong></div>
+              {details.notes.trim() && <div><span>Note</span><strong>{details.notes}</strong></div>}
               <p>Your appointment request will be saved. The salon can confirm final service details with you directly.</p>
               {bookingError && <p className="admin-error">{bookingError}</p>}
               <button className="button gold" type="submit">Confirm appointment</button>
             </form>}
             {step < 4 && <div className="booking-actions"><button disabled={step === 1 || (selectedHairstyle && step === 2)} onClick={() => setStep(step - 1)}>Back</button><button className="next" type={step === 3 ? "submit" : "button"} form={step === 3 ? "details-form" : undefined} disabled={step === 2 && availableTimes.length === 0} onClick={step === 3 ? undefined : () => setStep(step + 1)}>Continue</button></div>}
-          </> : <div className="confirmation"><span>âœ“</span><p>Appointment request received</p><h2>We'll see you soon, {details.name.split(" ")[0]}.</h2><div><strong>{selectedService.name}</strong><p>{selectedHairstyle ? `Inspired by ${selectedHairstyle.name} Â· ` : ""}{date} at {time}</p></div><a className="button gold" href="/">Back to the website</a></div>}
+          </> : <div className="confirmation"><span>✓</span><p>Appointment request received</p><h2>We'll see you soon, {details.name.split(" ")[0]}.</h2><div><strong>{selectedService.name}</strong><p>{date} at {time}</p></div><a className="button gold" href="/">Back to the website</a></div>}
         </section>
       </section>
     </main>
@@ -311,4 +318,3 @@ function formatDuration(minutes: number) {
   if (!hours) return `${rest} min`;
   return rest ? `${hours} hrs ${rest} min` : `${hours} hrs`;
 }
-

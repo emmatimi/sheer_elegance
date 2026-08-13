@@ -78,7 +78,7 @@ export default function Home() {
   const [date, setDate] = useState(todayIso);
   const [time, setTime] = useState(times[1]);
   const [paymentOption, setPaymentOption] = useState<"deposit" | "half" | "full" | "pay_on_arrival">("deposit");
-  const [details, setDetails] = useState({ name: "", phone: "", email: "" });
+  const [details, setDetails] = useState({ name: "", phone: "", email: "", notes: "" });
   const [confirmed, setConfirmed] = useState(false);
   const [bookingError, setBookingError] = useState("");
   const [bookedTimes, setBookedTimes] = useState<Record<string, string[]>>({});
@@ -286,6 +286,7 @@ export default function Home() {
         appointmentDate: date,
         appointmentTime: time,
         paymentOption,
+        notes: details.notes,
         hairstyle: selectedHairstyle ? {
           name: selectedHairstyle.name,
           category: selectedHairstyle.category,
@@ -384,12 +385,12 @@ export default function Home() {
             <p className="hero-copy">{activeHero.copy}</p>
           </div>
           <div className="hero-actions">
-            <a className="button gold" href="/book">Book an appointment <span>?</span></a>
-            <a className="text-link" href="#services">Explore services <span>?</span></a>
+            <a className="button gold" href="/book">Book an appointment <span aria-hidden="true">&rarr;</span></a>
+            <a className="text-link" href="#services">Explore services <span aria-hidden="true">&rarr;</span></a>
           </div>
         </div>
         <div className={heroCursor.visible ? "hero-cursor visible" : "hero-cursor"} style={{ left: heroCursor.x, top: heroCursor.y }} aria-hidden="true">
-          {heroCursor.mode === "left" ? "<" : heroCursor.mode === "down" ? "?" : ">"}
+          {heroCursor.mode === "left" ? "<" : heroCursor.mode === "down" ? "v" : ">"}
         </div>
       </section>
 
@@ -398,7 +399,7 @@ export default function Home() {
           <p className="eyebrow dark">Find your look</p>
           <h2>Browse styles before you book.</h2>
           <p>Explore braids, silk press looks, bridal styling and protective inspiration. Pick a hairstyle, book from the gallery, and we’ll attach your chosen reference to your appointment.</p>
-          <a className="button gold" href="/hairstyles">Explore hairstyles <span>?</span></a>
+          <a className="button gold" href="/hairstyles">Explore hairstyles <span aria-hidden="true">&rarr;</span></a>
         </div>
         <div className="hairstyle-promo-strip">
           {(hairstyles.length ? hairstyles.slice(0, 3) : availableServices.slice(0, 3).map((item) => ({ id: item.id, name: item.name, imageUrl: item.image, category: item.category }))).map((item) => (
@@ -414,7 +415,7 @@ export default function Home() {
         <div><span>01</span><p>Choose a service</p><strong>{service}</strong></div>
         <div><span>02</span><p>Select a date</p><strong>{date}</strong></div>
         <div><span>03</span><p>Find your moment</p><strong>{time}</strong></div>
-        <a href="/book">Check availability <span>?</span></a>
+        <div className="quick-book-final"><span>04</span><p>Confirm your visit</p><strong>Appointment request</strong></div>
       </section>
 
       <section className="section services" id="services" data-animate>
@@ -509,7 +510,7 @@ export default function Home() {
           <article><span>Visit</span><p>14 Admiralty Way<br />Akure , Ondo</p></article>
           <article><span>Opening hours</span><p>Tue-Fri - 9am-7pm<br />Sat - 8am-6pm</p></article>
           <article><span>Talk to us</span><p>+234 810 000 2026<br />hello@sheerelegance.ng</p></article>
-          <a className="button gold contact-us-book-tile" href="/book">Book an appointment <span>?</span></a>
+          <a className="button gold contact-us-book-tile" href="/book">Book an appointment <span aria-hidden="true">&rarr;</span></a>
         </div>
       </section>
 
@@ -523,18 +524,24 @@ export default function Home() {
             <div className="stepper">{(selectedHairstyle ? [2,3,4] : [1,2,3,4]).map((n, index) => <span key={n} className={step >= n ? "active" : ""}>{index + 1}</span>)}</div>
             {step === 1 && <div className="booking-step"><p className="step-label">01 - Choose your service</p><div className="option-list">{availableServices.map((item) => <button key={item.name} className={service === item.name ? "selected" : ""} onClick={() => setService(item.name)}><span><b>{item.name}</b><small>{item.shortDescription}</small></span></button>)}</div></div>}
             {step === 2 && <div className="booking-step"><p className="step-label">{selectedHairstyle ? "01" : "02"} - Select a date and time</p>{selectedHairstyle && <div className="selected-look-summary"><img src={selectedHairstyle.imageUrl} alt="" /><div><span>Selected look</span><strong>{selectedHairstyle.name}</strong><p>{selectedHairstyle.category}</p></div></div>}<div className="calendar-grid">{calendarDays.map((day) => <button key={day.iso} disabled={day.disabled} className={date === day.iso ? "selected" : ""} onClick={() => chooseDate(day)}><span>{day.weekday}</span><strong>{day.day}</strong></button>)}</div><div className="time-grid">{times.map((item) => <button key={item} disabled={bookedTimes[date]?.includes(item)} className={time === item ? "selected" : ""} onClick={() => { setBookingError(""); setTime(item); }}>{item}</button>)}</div>{availableTimes.length === 0 && <p className="admin-error">This day is fully booked. Please choose another date.</p>}{bookingError && <p className="admin-error">{bookingError}</p>}</div>}
-            {step === 3 && <form className="booking-step details-form" id="details-form" onSubmit={(e) => { e.preventDefault(); setStep(4); }}><p className="step-label">03 - Your details</p><label>Full name<input required value={details.name} onChange={(e) => setDetails({...details, name:e.target.value})} placeholder="Ada Okafor" /></label><label>Phone number<input required type="tel" value={details.phone} onChange={(e) => setDetails({...details, phone:e.target.value})} placeholder="+234 800 000 0000" /></label><label>Email address<input required type="email" value={details.email} onChange={(e) => setDetails({...details, email:e.target.value})} placeholder="you@example.com" /></label></form>}
+            {step === 3 && <form className="booking-step details-form" id="details-form" onSubmit={(e) => { e.preventDefault(); setStep(4); }}><p className="step-label">03 - Your details</p><label>Full name<input required value={details.name} onChange={(e) => setDetails({...details, name:e.target.value})} placeholder="Ada Okafor" /></label><label>Phone number<input required type="tel" value={details.phone} onChange={(e) => setDetails({...details, phone:e.target.value})} placeholder="+234 800 000 0000" /></label><label>Email address<input required type="email" value={details.email} onChange={(e) => setDetails({...details, email:e.target.value})} placeholder="you@example.com" /></label><label className="wide">Optional note<textarea value={details.notes} onChange={(e) => setDetails({...details, notes:e.target.value})} placeholder="Tell us anything useful before your visit." /></label></form>}
             {step === 4 && <form className="booking-step summary" onSubmit={submitBooking}>
               <p className="step-label">04 - Payment and confirmation</p>
               <div><span>Service</span><strong>{selectedService.name}</strong></div>
-              {selectedHairstyle && <div><span>Hairstyle inspiration</span><strong>{selectedHairstyle.name}</strong><small>{selectedHairstyle.category}</small></div>}
-              <div><span>When</span><strong>{date} - {time}</strong></div>
+              {selectedHairstyle && <div><span>Hairstyle</span><strong>{selectedHairstyle.name}</strong></div>}
+              {selectedHairstyle && <div><span>Category</span><strong>{selectedHairstyle.category}</strong></div>}
+              <div><span>Date</span><strong>{date}</strong></div>
+              <div><span>Time</span><strong>{time}</strong></div>
+              <div><span>Name</span><strong>{details.name}</strong></div>
+              <div><span>Phone</span><strong>{details.phone}</strong></div>
+              <div><span>Email</span><strong>{details.email}</strong></div>
+              {details.notes.trim() && <div><span>Note</span><strong>{details.notes}</strong></div>}
               <p>Your appointment request will be saved. The salon can confirm final service details with you directly.</p>
               {bookingError && <p className="admin-error">{bookingError}</p>}
               <button className="button gold" type="submit">{paymentOption === "pay_on_arrival" ? "Confirm appointment" : "Continue to payment"}</button>
             </form>}
-            {step < 4 && <div className="booking-actions"><button disabled={step === 1 || (selectedHairstyle && step === 2)} onClick={() => setStep(step - 1)}>Back</button><button className="next" type={step === 3 ? "submit" : "button"} form={step === 3 ? "details-form" : undefined} disabled={step === 2 && availableTimes.length === 0} onClick={step === 3 ? undefined : () => setStep(step + 1)}>Continue <span>?</span></button></div>}
-          </> : <div className="confirmation"><span>?</span><p>Appointment request received</p><h2>We'll see you soon, {details.name.split(" ")[0]}.</h2><div><strong>{selectedService.name}</strong><p>{selectedHairstyle ? `Inspired by ${selectedHairstyle.name} · ` : ""}{date} at {time}</p></div><button className="button gold" onClick={() => setBookingOpen(false)}>Back to the website</button></div>}
+            {step < 4 && <div className="booking-actions"><button disabled={step === 1 || (selectedHairstyle && step === 2)} onClick={() => setStep(step - 1)}>Back</button><button className="next" type={step === 3 ? "submit" : "button"} form={step === 3 ? "details-form" : undefined} disabled={step === 2 && availableTimes.length === 0} onClick={step === 3 ? undefined : () => setStep(step + 1)}>Continue <span aria-hidden="true">&rarr;</span></button></div>}
+          </> : <div className="confirmation"><span>Done</span><p>Appointment request received</p><h2>We'll see you soon, {details.name.split(" ")[0]}.</h2><div><strong>{selectedService.name}</strong><p>{date} at {time}</p></div><button className="button gold" onClick={() => setBookingOpen(false)}>Back to the website</button></div>}
         </div>
       </div>}
     </main>
@@ -600,5 +607,3 @@ function paymentAmountFor(
   if (option === "full") return priceNaira;
   return 0;
 }
-
-

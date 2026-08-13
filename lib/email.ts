@@ -1,17 +1,18 @@
-import type { Booking, SalonSettings } from "@/db/salon";
+﻿import type { Booking, SalonSettings } from "@/db/salon";
 
 type EmailConfig = {
   provider: "resend" | "brevo";
   apiKey: string;
   from: string;
   adminTo: string;
-  logoUrl: string;
+  logoUrl: string | null;
 };
 
 type EmailAttachment = {
   filename: string;
   content: string;
   contentType: string;
+  encoded?: boolean;
 };
 
 export async function sendBookingEmails(input: {
@@ -28,20 +29,21 @@ export async function sendBookingEmails(input: {
         contentType: "text/html",
       }]
     : [];
+  const attachments = [...receiptAttachments, ...hairstyleReferenceAttachments(input.booking)];
 
   await Promise.all([
     sendEmail(config, {
       to: input.booking.customerEmail,
       subject: "Your Sheer Elegance appointment request",
       html: customerBookingEmail(input.booking, input.settings, config.logoUrl),
-      attachments: receiptAttachments,
+      attachments,
     }),
     sendEmail(config, {
       to: config.adminTo,
       subject: `New booking: ${input.booking.customerName}`,
       html: adminBookingEmail(input.booking, input.settings, config.logoUrl),
       replyTo: input.booking.customerEmail,
-      attachments: receiptAttachments,
+      attachments,
     }),
   ]);
 
@@ -96,11 +98,11 @@ export function bookingReceiptHtml(booking: Booking, settings: SalonSettings) {
       ["Service", booking.serviceName],
       ...hairstyleRows(booking),
       ["Appointment", `${booking.appointmentDate} - ${booking.appointmentTime}`],
-      ["Amount paid", formatNaira(booking.amountPaidNaira)],
       ["Transaction reference", booking.transactionReference ?? "Pending"],
       ["Address", settings.studioAddress],
     ])}
-  `, `${cleanEnv(process.env.SITE_URL) ?? ""}/sheer-elegance-logo.png`);
+    ${hairstyleBlock(booking)}
+  `, publicLogoUrl());
 }
 
 async function sendEmail(
@@ -143,7 +145,7 @@ async function sendWithResend(
       reply_to: message.replyTo,
       attachments: message.attachments?.map((attachment) => ({
         filename: attachment.filename,
-        content: toBase64(attachment.content),
+        content: attachment.encoded ? attachment.content : toBase64(attachment.content),
       })),
     }),
   });
@@ -176,7 +178,7 @@ async function sendWithBrevo(
       replyTo: message.replyTo ? { email: message.replyTo } : undefined,
       attachment: message.attachments?.map((attachment) => ({
         name: attachment.filename,
-        content: toBase64(attachment.content),
+        content: attachment.encoded ? attachment.content : toBase64(attachment.content),
       })),
     }),
   });
@@ -197,7 +199,7 @@ function getEmailConfig(): EmailConfig | null {
   const provider = cleanEnv(process.env.EMAIL_PROVIDER);
   const from = cleanEnv(process.env.MAIL_FROM);
   const adminTo = cleanEnv(process.env.ADMIN_NOTIFY_EMAIL);
-  const logoUrl = `${cleanEnv(process.env.SITE_URL) ?? ""}/sheer-elegance-logo.png`;
+  const logoUrl = publicLogoUrl();
 
   if (!from || !adminTo) return null;
 
@@ -237,7 +239,7 @@ function emailUnsupportedReason() {
   };
 }
 
-function customerBookingEmail(booking: Booking, settings: SalonSettings, logoUrl: string) {
+function customerBookingEmail(booking: Booking, settings: SalonSettings, logoUrl: string | null) {
   return layout(`
     <p>Hello ${escapeHtml(firstName(booking.customerName))},</p>
     <p>Thank you for booking with Oreoluwa Sheer Elegance. We have received your appointment request and our team will confirm shortly.</p>
@@ -248,14 +250,14 @@ function customerBookingEmail(booking: Booking, settings: SalonSettings, logoUrl
       ["Time", booking.appointmentTime],
       ["Address", settings.studioAddress],
       ["Phone", settings.phone],
-      ["Payment", paymentSummary(booking)],
+      ...noteRows(booking),
     ])}
     ${hairstyleBlock(booking)}
-    <p>Please arrive a few minutes early so we can begin with a calm consultation.</p>
+    <p>We await your arrival.</p>
   `, logoUrl);
 }
 
-function adminBookingEmail(booking: Booking, settings: SalonSettings, logoUrl: string) {
+function adminBookingEmail(booking: Booking, settings: SalonSettings, logoUrl: string | null) {
   return layout(`
     <p>New appointment request received.</p>
     ${detailsTable([
@@ -266,8 +268,7 @@ function adminBookingEmail(booking: Booking, settings: SalonSettings, logoUrl: s
       ...hairstyleRows(booking),
       ["Date", booking.appointmentDate],
       ["Time", booking.appointmentTime],
-      ["Address", settings.studioAddress],
-      ["Payment", paymentSummary(booking)],
+      ...noteRows(booking),
     ])}
     ${hairstyleBlock(booking)}
   `, logoUrl);
@@ -281,16 +282,45 @@ function hairstyleRows(booking: Booking): Array<[string, string]> {
   ]];
 }
 
-function hairstyleBlock(booking: Booking) {
-  if (!booking.hairstyleImageUrl) return "";
+function hairstyleBlock(booking: Booking, options: { allowDataImage?: boolean } = {}) {
+  if (!booking.hairstyleName && !booking.hairstyleImageUrl && !booking.hairstyleDescription) return "";
+  const imageUrl = emailSafeImageUrl(booking.hairstyleImageUrl, { allowDataImage: options.allowDataImage });
+  const title = booking.hairstyleName
+    ? `${escapeHtml(booking.hairstyleName)}${booking.hairstyleCategory ? ` · ${escapeHtml(booking.hairstyleCategory)}` : ""}`
+    : "";
   return `
     <p style="margin:20px 0 8px;color:#8d7132">Hairstyle reference</p>
-    <img src="${escapeHtml(booking.hairstyleImageUrl)}" alt="${escapeHtml(booking.hairstyleName ?? "Hairstyle reference")}" style="width:100%;max-height:360px;object-fit:cover;border:1px solid #ded6ca" />
+    ${title ? `<p style="margin:0 0 8px;font-weight:700">${title}</p>` : ""}
+    ${imageUrl ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(booking.hairstyleName ?? "Hairstyle reference")}" style="width:100%;max-height:360px;object-fit:cover;border:1px solid #ded6ca;display:block" />` : ""}
     ${booking.hairstyleDescription ? `<p>${escapeHtml(booking.hairstyleDescription)}</p>` : ""}
   `;
 }
 
-function layout(content: string, logoUrl: string) {
+function hairstyleReferenceAttachments(booking: Booking): EmailAttachment[] {
+  const image = dataImageAttachment(booking.hairstyleImageUrl, `hairstyle-reference-${booking.id}`);
+  return image ? [image] : [];
+}
+
+function dataImageAttachment(value: string | null | undefined, basename: string): EmailAttachment | null {
+  const raw = cleanEnv(value ?? undefined);
+  if (!raw?.startsWith("data:image/")) return null;
+  const match = raw.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+  if (!match) return null;
+  const contentType = match[1];
+  const extension = contentType.split("/")[1]?.replace("jpeg", "jpg") ?? "png";
+  return {
+    filename: `${basename}.${extension}`,
+    content: match[2],
+    contentType,
+    encoded: true,
+  };
+}
+
+function noteRows(booking: Booking): Array<[string, string]> {
+  return booking.notes ? [["Customer note", booking.notes]] : [];
+}
+
+function layout(content: string, logoUrl: string | null) {
   return `
     <div style="background:#f6f1e7;padding:16px;font-family:Arial,sans-serif;color:#16130f;word-break:break-word">
       <div style="max-width:620px;margin:0 auto;background:#fffdf8;border:1px solid #ded6ca;padding:24px 16px">
@@ -300,6 +330,20 @@ function layout(content: string, logoUrl: string) {
       </div>
     </div>
   `;
+}
+
+function publicLogoUrl() {
+  return emailSafeImageUrl(cleanEnv(process.env.PUBLIC_LOGO_URL) ?? "/sheer-elegance-logo.png");
+}
+
+function emailSafeImageUrl(value: string | null | undefined, options: { allowDataImage?: boolean } = {}) {
+  const raw = cleanEnv(value ?? undefined);
+  if (!raw) return null;
+  if (raw.startsWith("data:")) return options.allowDataImage ? raw : null;
+  if (/^https?:\/\//i.test(raw)) return raw;
+  const siteUrl = cleanEnv(process.env.SITE_URL);
+  if (!siteUrl || /^https?:\/\/localhost(?::|\/|$)/i.test(siteUrl)) return null;
+  return new URL(raw.startsWith("/") ? raw : `/${raw}`, siteUrl).toString();
 }
 
 function paymentSummary(booking: Booking) {
