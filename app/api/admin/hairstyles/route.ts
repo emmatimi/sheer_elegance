@@ -4,7 +4,7 @@ import { requireAdminSession } from "@/lib/admin-auth";
 export async function GET(request: Request) {
   const session = requireAdminSession(request);
   if (session instanceof Response) return session;
-  return Response.json({ hairstyles: await getHairstyles() });
+  return noStoreJson({ hairstyles: await getHairstyles() });
 }
 
 export async function PUT(request: Request) {
@@ -15,7 +15,7 @@ export async function PUT(request: Request) {
     const payload = await request.json();
     const hairstyles = parseHairstyles(payload);
     await saveHairstyles(hairstyles);
-    return Response.json({ hairstyles: await getHairstyles() });
+    return noStoreJson({ hairstyles: await getHairstyles() });
   } catch (error) {
     return Response.json(
       { error: error instanceof Error ? error.message : "Unable to save hairstyles" },
@@ -33,7 +33,7 @@ export async function DELETE(request: Request) {
     const id = Number(url.searchParams.get("id"));
     if (!Number.isInteger(id) || id < 1) throw new Error("Valid hairstyle id is required");
     await deleteHairstyle(id);
-    return Response.json({ hairstyles: await getHairstyles() });
+    return noStoreJson({ hairstyles: await getHairstyles() });
   } catch (error) {
     return Response.json(
       { error: error instanceof Error ? error.message : "Unable to delete hairstyle" },
@@ -74,4 +74,10 @@ function parseHairstyles(payload: unknown): Hairstyle[] {
 function requiredString(value: unknown, field: string) {
   if (typeof value !== "string" || !value.trim()) throw new Error(`${field} is required`);
   return value.trim();
+}
+
+function noStoreJson(payload: unknown, init?: ResponseInit) {
+  const headers = new Headers(init?.headers);
+  headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  return Response.json(payload, { ...init, headers });
 }

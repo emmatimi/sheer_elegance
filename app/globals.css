@@ -483,6 +483,8 @@ footer>p { color:#75716b; font-family:var(--font-display); font-size:20px; }
 .admin-card-actions .gold { background:var(--gold); border-color:var(--gold); }
 .admin-card-actions .danger-icon { width:52px; min-width:52px; padding:0; display:grid; place-items:center; border-color:#cfa8a0; color:#9f2d23; font-size:15px; letter-spacing:0; }
 .admin-card-actions .danger-icon:hover { background:#fff0ee; border-color:#9f2d23; }
+.admin-card-actions .danger-confirm { background:#9f2d23; border-color:#9f2d23; color:white; min-width:138px; }
+.admin-card-actions .danger-confirm:hover { background:#7d211a; border-color:#7d211a; }
 .admin-service-readonly p { color:#5f594f; line-height:1.75; margin:0 0 18px; }
 .admin-service-list-label { display:block; margin:2px 0 12px; color:#8d7132; text-transform:uppercase; letter-spacing:.14em; font-size:10px; font-weight:800; }
 .admin-service-bullet-list { margin:0; padding:0 0 0 18px; columns:3 150px; column-gap:34px; color:#3f3932; line-height:1.7; font-size:14px; font-weight:500; }

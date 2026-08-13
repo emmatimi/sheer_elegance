@@ -247,7 +247,7 @@ export default function BookPage() {
               {bookingError && <p className="admin-error">{bookingError}</p>}
               <button className="button gold" type="submit">Confirm appointment</button>
             </form>}
-            {step < 4 && <div className="booking-actions"><button disabled={step === 1 || (selectedHairstyle && step === 2)} onClick={() => setStep(step - 1)}>Back</button><button className="next" type={step === 3 ? "submit" : "button"} form={step === 3 ? "details-form" : undefined} disabled={step === 2 && availableTimes.length === 0} onClick={step === 3 ? undefined : () => setStep(step + 1)}>Continue <span>â†—</span></button></div>}
+            {step < 4 && <div className="booking-actions"><button disabled={step === 1 || (selectedHairstyle && step === 2)} onClick={() => setStep(step - 1)}>Back</button><button className="next" type={step === 3 ? "submit" : "button"} form={step === 3 ? "details-form" : undefined} disabled={step === 2 && availableTimes.length === 0} onClick={step === 3 ? undefined : () => setStep(step + 1)}>Continue</button></div>}
           </> : <div className="confirmation"><span>âœ“</span><p>Appointment request received</p><h2>We'll see you soon, {details.name.split(" ")[0]}.</h2><div><strong>{selectedService.name}</strong><p>{selectedHairstyle ? `Inspired by ${selectedHairstyle.name} Â· ` : ""}{date} at {time}</p></div><a className="button gold" href="/">Back to the website</a></div>}
         </section>
       </section>

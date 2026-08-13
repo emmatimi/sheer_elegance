@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { DragEvent, FormEvent, MouseEvent, useEffect, useMemo, useState } from "react";
 
@@ -82,7 +82,7 @@ const serviceGuide = [
   ["Relaxed and straight hair styling", "silk press, blow-dry and straightening, roller sets, wrap styling, curls, waves and sleek styling."],
   ["Loc services", "starter locs, retwisting, loc styling, interlocking, faux locs, butterfly locs, soft locs and loc extensions."],
   ["Bridal and occasion styling", "bridal updos, bridesmaid hairstyles, traditional wedding hairstyles, birthday hairstyles, prom styling, formal updos and hair-accessory installation."],
-  ["Children’s hairstyling", "kids’ cornrows, braids, beads, twists, ponytails and natural protective styles."],
+  ["Childrenâ€™s hairstyling", "kidsâ€™ cornrows, braids, beads, twists, ponytails and natural protective styles."],
   ["Hair preparation and finishing", "washing, conditioning, detangling, blow-drying, trimming, edge styling, hair treatment and scalp treatment."],
 ];
 
@@ -110,6 +110,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
   const [modalImageUrl, setModalImageUrl] = useState("");
   const [hairstyleModalImageUrl, setHairstyleModalImageUrl] = useState("");
   const [previewImageUrl, setPreviewImageUrl] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<{ type: "service" | "hairstyle"; id: number } | null>(null);
 
   useEffect(() => {
     setActiveSection(section);
@@ -203,13 +204,15 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
     event.preventDefault();
     setStatus("");
     setActiveSection(nextSection);
+    setPendingDelete(null);
     window.history.pushState(null, "", `/admin/${nextSection}`);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function addServiceFromModal(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const name = String(form.get("name") ?? "").trim();
     const slug = String(form.get("slug") ?? "").trim() || slugify(name);
     const shortDescription = String(form.get("shortDescription") ?? "").trim();
@@ -242,7 +245,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
       await persistServices(nextServices);
       setServiceModalOpen(false);
       setModalImageUrl("");
-      event.currentTarget.reset();
+      formElement.reset();
       setStatus("New service saved.");
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Unable to save new service.");
@@ -253,6 +256,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
 
   function startEditingService(service: ServiceRecord) {
     setEditingServices((current) => ({ ...current, [service.id]: { ...service } }));
+    setPendingDelete(null);
     setStatus("");
   }
 
@@ -285,8 +289,8 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
       setStatus("Please upload an image file.");
       return;
     }
-    if (file.size > 1_500_000) {
-      setStatus("Please use an image smaller than 1.5 MB.");
+    if (file.size > 5_000_000) {
+      setStatus("Please use an image smaller than 5 MB.");
       return;
     }
 
@@ -343,7 +347,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
       const nextServices = services.map((service) => service.id === serviceId ? draft : service);
       await persistServices(nextServices);
       cancelEditingService(serviceId);
-      setStatus("Service saved.");
+      setStatus("Success: service changes saved.");
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Unable to save service.");
     } finally {
@@ -353,14 +357,20 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
 
   async function deleteServiceCard(serviceId: number) {
     const service = services.find((item) => item.id === serviceId);
-    if (!service || !window.confirm(`Delete "${service.name}"? This cannot be undone.`)) return;
+    if (!service) return;
+    if (pendingDelete?.type !== "service" || pendingDelete.id !== serviceId) {
+      setPendingDelete({ type: "service", id: serviceId });
+      setStatus(`Warning: confirm delete for "${service.name}".`);
+      return;
+    }
     setStatus("");
     try {
       const response = await fetch(`/api/admin/services?id=${serviceId}`, { method: "DELETE" });
       const payload = await response.json().catch(() => null);
       if (!response.ok) throw new Error(payload?.error ?? "Unable to delete service.");
       setServices(payload.services ?? services.filter((item) => item.id !== serviceId));
-      setStatus("Service deleted.");
+      setPendingDelete(null);
+      setStatus(`Success: "${service.name}" deleted.`);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Unable to delete service.");
     }
@@ -368,7 +378,8 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
 
   async function addHairstyleFromModal(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const name = String(form.get("name") ?? "").trim();
     const category = String(form.get("category") ?? services[0]?.name ?? "").trim();
     const slug = String(form.get("slug") ?? "").trim() || slugify(name);
@@ -401,7 +412,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
       await persistHairstyles(nextHairstyles);
       setHairstyleModalOpen(false);
       setHairstyleModalImageUrl("");
-      event.currentTarget.reset();
+      formElement.reset();
       setStatus("New hairstyle saved.");
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Unable to save new hairstyle.");
@@ -412,6 +423,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
 
   function startEditingHairstyle(hairstyle: HairstyleRecord) {
     setEditingHairstyles((current) => ({ ...current, [hairstyle.id]: { ...hairstyle } }));
+    setPendingDelete(null);
     setStatus("");
   }
 
@@ -463,7 +475,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
       const nextHairstyles = hairstyles.map((hairstyle) => hairstyle.id === hairstyleId ? draft : hairstyle);
       await persistHairstyles(nextHairstyles);
       cancelEditingHairstyle(hairstyleId);
-      setStatus("Hairstyle saved.");
+      setStatus("Success: hairstyle changes saved.");
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Unable to save hairstyle.");
     } finally {
@@ -473,14 +485,20 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
 
   async function deleteHairstyleCard(hairstyleId: number) {
     const hairstyle = hairstyles.find((item) => item.id === hairstyleId);
-    if (!hairstyle || !window.confirm(`Delete "${hairstyle.name}"? This cannot be undone.`)) return;
+    if (!hairstyle) return;
+    if (pendingDelete?.type !== "hairstyle" || pendingDelete.id !== hairstyleId) {
+      setPendingDelete({ type: "hairstyle", id: hairstyleId });
+      setStatus(`Warning: confirm delete for "${hairstyle.name}".`);
+      return;
+    }
     setStatus("");
     try {
       const response = await fetch(`/api/admin/hairstyles?id=${hairstyleId}`, { method: "DELETE" });
       const payload = await response.json().catch(() => null);
       if (!response.ok) throw new Error(payload?.error ?? "Unable to delete hairstyle.");
       setHairstyles(payload.hairstyles ?? hairstyles.filter((item) => item.id !== hairstyleId));
-      setStatus("Hairstyle deleted.");
+      setPendingDelete(null);
+      setStatus(`Success: "${hairstyle.name}" deleted.`);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Unable to delete hairstyle.");
     }
@@ -516,7 +534,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
   })[activeSection], [activeSection]);
 
   if (checkingSession) {
-    return <main className="admin-shell login-shell"><p>Checking admin session…</p></main>;
+    return <main className="admin-shell login-shell"><p>Checking admin session</p></main>;
   }
 
   if (!loggedIn) {
@@ -571,11 +589,11 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
               {bookings.length ? bookings.map((booking) => (
                 <article key={booking.id}>
                   <div className="booking-main">
-                    <p>{booking.appointmentDate} · {booking.appointmentTime}</p>
+                    <p>{booking.appointmentDate} Â· {booking.appointmentTime}</p>
                     <h3>{booking.customerName}</h3>
                     <span>{booking.serviceName}</span>
                     {booking.hairstyleName && <span>Inspired by: {booking.hairstyleName}</span>}
-                    <span>{booking.customerPhone} · {booking.customerEmail}</span>
+                    <span>{booking.customerPhone} Â· {booking.customerEmail}</span>
                   </div>
                   <div className="booking-meta">
                     <span className="status-pill">{booking.status}</span>
@@ -643,7 +661,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
                     <div className="admin-service-fields">
                       <div className="admin-service-card-head wide">
                         <div>
-                          <p>Service #{index + 1} · {service.slug}</p>
+                          <p>Service #{index + 1} Â· {service.slug}</p>
                           <h3>{service.name}</h3>
                         </div>
                         {isEditing ? (
@@ -652,12 +670,12 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
                               {savingServiceId === service.id ? "Saving..." : "Save"}
                             </button>
                             <button type="button" onClick={() => cancelEditingService(service.id)}>Cancel</button>
-                            <button className="danger-icon" type="button" aria-label={`Delete ${service.name}`} onClick={() => deleteServiceCard(service.id)}>🗑</button>
+                            {pendingDelete?.type === "service" && pendingDelete.id === service.id ? (<> <button className="danger-confirm" type="button" onClick={() => deleteServiceCard(service.id)}>Confirm delete</button><button type="button" onClick={() => setPendingDelete(null)}>Keep</button></>) : (<button className="danger-icon" type="button" aria-label={`Delete ${service.name}`} onClick={() => deleteServiceCard(service.id)}>Delete</button>)}
                           </div>
                         ) : (
                           <div className="admin-card-actions">
                             <button className="button ghost" type="button" onClick={() => startEditingService(service)}>Edit</button>
-                            <button className="danger-icon" type="button" aria-label={`Delete ${service.name}`} onClick={() => deleteServiceCard(service.id)}>🗑</button>
+                            {pendingDelete?.type === "service" && pendingDelete.id === service.id ? (<> <button className="danger-confirm" type="button" onClick={() => deleteServiceCard(service.id)}>Confirm delete</button><button type="button" onClick={() => setPendingDelete(null)}>Keep</button></>) : (<button className="danger-icon" type="button" aria-label={`Delete ${service.name}`} onClick={() => deleteServiceCard(service.id)}>Delete</button>)}
                           </div>
                         )}
                       </div>
@@ -665,7 +683,6 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
                         <>
                           <label className="wide">Service name<input value={editableService.name} onChange={(event) => updateServiceDraft(service.id, "name", event.target.value)} /></label>
                           <label>Slug<input value={editableService.slug} onChange={(event) => updateServiceDraft(service.id, "slug", event.target.value)} /></label>
-                          <label>Display order<input type="number" value={editableService.sortOrder} onChange={(event) => updateServiceDraft(service.id, "sortOrder", event.target.value)} /></label>
                           <label className="wide">Hairstyles under this service<textarea value={editableService.shortDescription} onChange={(event) => updateServiceDraft(service.id, "shortDescription", event.target.value)} /></label>
                         </>
                       ) : (
@@ -752,7 +769,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
                       <div className="admin-service-fields">
                         <div className="admin-service-card-head wide">
                           <div>
-                            <p>#{index + 1} · {hairstyle.category}</p>
+                            <p>#{index + 1} Â· {hairstyle.category}</p>
                             <h3>{hairstyle.name}</h3>
                           </div>
                           {isEditing ? (
@@ -761,21 +778,19 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
                                 {savingHairstyleId === hairstyle.id ? "Saving..." : "Save"}
                               </button>
                               <button type="button" onClick={() => cancelEditingHairstyle(hairstyle.id)}>Cancel</button>
-                              <button className="danger-icon" type="button" aria-label={`Delete ${hairstyle.name}`} onClick={() => deleteHairstyleCard(hairstyle.id)}>🗑</button>
+                              {pendingDelete?.type === "hairstyle" && pendingDelete.id === hairstyle.id ? (<> <button className="danger-confirm" type="button" onClick={() => deleteHairstyleCard(hairstyle.id)}>Confirm delete</button><button type="button" onClick={() => setPendingDelete(null)}>Keep</button></>) : (<button className="danger-icon" type="button" aria-label={`Delete ${hairstyle.name}`} onClick={() => deleteHairstyleCard(hairstyle.id)}>Delete</button>)}
                             </div>
                           ) : (
                             <div className="admin-card-actions">
                               <button className="button ghost" type="button" onClick={() => startEditingHairstyle(hairstyle)}>Edit</button>
-                              <button className="danger-icon" type="button" aria-label={`Delete ${hairstyle.name}`} onClick={() => deleteHairstyleCard(hairstyle.id)}>🗑</button>
+                              {pendingDelete?.type === "hairstyle" && pendingDelete.id === hairstyle.id ? (<> <button className="danger-confirm" type="button" onClick={() => deleteHairstyleCard(hairstyle.id)}>Confirm delete</button><button type="button" onClick={() => setPendingDelete(null)}>Keep</button></>) : (<button className="danger-icon" type="button" aria-label={`Delete ${hairstyle.name}`} onClick={() => deleteHairstyleCard(hairstyle.id)}>Delete</button>)}
                             </div>
                           )}
                         </div>
                         {isEditing ? (
                           <>
                             <label className="wide">Hairstyle name<input value={editableHairstyle.name} onChange={(event) => updateHairstyleDraft(hairstyle.id, "name", event.target.value)} /></label>
-                            <label>Slug<input value={editableHairstyle.slug} onChange={(event) => updateHairstyleDraft(hairstyle.id, "slug", event.target.value)} /></label>
                             <label>Service category<select value={editableHairstyle.category} onChange={(event) => updateHairstyleDraft(hairstyle.id, "category", event.target.value)}>{services.map((service) => <option key={service.id} value={service.name}>{service.name}</option>)}</select></label>
-                            <label>Sort order<input type="number" value={editableHairstyle.sortOrder} onChange={(event) => updateHairstyleDraft(hairstyle.id, "sortOrder", Number(event.target.value))} /></label>
                             <label className="wide">Tags<input value={editableHairstyle.tags.join(", ")} onChange={(event) => updateHairstyleDraft(hairstyle.id, "tags", event.target.value.split(",").map((tag) => tag.trim()).filter(Boolean))} /></label>
                             <label className="wide">Description<textarea value={editableHairstyle.description} onChange={(event) => updateHairstyleDraft(hairstyle.id, "description", event.target.value)} /></label>
                           </>
@@ -783,10 +798,8 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
                           <div className="admin-service-readonly wide">
                             <p>{hairstyle.description}</p>
                             <dl>
-                              <div><dt>Slug</dt><dd>{hairstyle.slug}</dd></div>
                               <div><dt>Category</dt><dd>{hairstyle.category}</dd></div>
                               <div><dt>Tags</dt><dd>{hairstyle.tags.join(", ") || "None"}</dd></div>
-                              <div><dt>Sort</dt><dd>{hairstyle.sortOrder}</dd></div>
                             </dl>
                           </div>
                         )}
@@ -830,7 +843,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
                 <p className="eyebrow dark">New service</p>
                 <h2 id="add-service-title">Add salon service</h2>
               </div>
-              <button type="button" onClick={() => setServiceModalOpen(false)}>×</button>
+              <button type="button" onClick={() => setServiceModalOpen(false)}>Ã—</button>
             </div>
             <div className="admin-modal-grid">
               <label className="wide">Service name<input name="name" required placeholder="Silk press and trim" /></label>
@@ -866,11 +879,10 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
                 <p className="eyebrow dark">New hairstyle</p>
                 <h2 id="add-hairstyle-title">Add hairstyle</h2>
               </div>
-              <button type="button" onClick={() => setHairstyleModalOpen(false)}>×</button>
+              <button type="button" onClick={() => setHairstyleModalOpen(false)}>Ã—</button>
             </div>
             <div className="admin-modal-grid">
               <label className="wide">Hairstyle name<input name="name" required placeholder="Soft stitch cornrows" /></label>
-              <label>Slug<input name="slug" placeholder="soft-stitch-cornrows" /></label>
               <label>Service category<select name="category" required defaultValue=""> <option value="" disabled>Select service</option>{services.map((service) => <option key={service.id} value={service.name}>{service.name}</option>)}</select></label>
               <label className="wide">Tags<input name="tags" placeholder="cornrows, stitch, protective" /></label>
               <label
@@ -899,7 +911,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
         <div className="admin-modal image-viewer" role="dialog" aria-modal="true" aria-label="Service image preview">
           <button className="admin-modal-backdrop" type="button" aria-label="Close image preview" onClick={() => setPreviewImageUrl("")} />
           <div className="admin-image-viewer-card">
-            <button type="button" onClick={() => setPreviewImageUrl("")}>×</button>
+            <button type="button" onClick={() => setPreviewImageUrl("")}>Ã—</button>
             <img src={previewImageUrl} alt="Service preview" />
           </div>
         </div>
@@ -948,5 +960,6 @@ function slugify(value: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
 }
+
 
 

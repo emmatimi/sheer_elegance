@@ -442,8 +442,9 @@ export default function Home() {
           <a className="read-more-button" href="/book">Reserve your chair</a>
         </div>
         <div className="contact-collage parallax-content" aria-label="Sheer Elegance salon moments">
-          <img className="collage-left" src="https://ik.imagekit.io/4lndq5ke52/sheer_elegance/hair2.jpeg?auto=format&fit=crop&w=620&q=80" alt="Client in salon chair during a styling appointment" loading="lazy" />
-          <img className="collage-front" src="https://ik.imagekit.io/4lndq5ke52/sheer_elegance/hair.jpeg?auto=format&fit=crop&w=680&q=80" alt="Hair stylist finishing a salon look" loading="lazy" />
+          <img className="collage-left" src="https://ik.imagekit.io/4lndq5ke52/sheer_elegance/salon.jpg?auto=format&fit=crop&w=620&q=80" alt="Client in salon chair during a styling appointment" loading="lazy" />
+          <img className="collage-front" src="https://ik.imagekit.io/4lndq5ke52/sheer_elegance/equip.jpg?auto=format&fit=crop&w=680&q=80" alt="Hair stylist finishing a salon look" loading="lazy" />
+        
         </div>
       </section>
 
@@ -473,8 +474,8 @@ export default function Home() {
         <div className="gallery-title"><p className="eyebrow dark">Fresh from the chair</p><h2>Made to be<br /><em className="script-word">remembered.</em></h2></div>
         <div className="gallery-grid">
           <figure className="gallery-main"><img src="https://ik.imagekit.io/4lndq5ke52/sheer_elegance/confirm6.png?updatedAt=1786317818552/c_crop,x_0,y_684,w_2800,h_1867/c_fill,w_1200,h_800,g_auto,q_90,fl_lossy,f_jpg/org/34g2cg7qikmavaytp.jpg" alt="Natural afro hairstyle" loading="lazy" /><figcaption><span>Natural texture</span><strong>The Halo</strong></figcaption></figure>
-          <figure><img src="https://i.pinimg.com/originals/be/85/eb/be85eb8fb718f89a6fdc2460d604bd9f.png" alt="Editorial natural hairstyle" loading="lazy" /><figcaption><span>Editorial</span><strong>Soft Sculpture</strong></figcaption></figure>
-          <figure><img src="https://cdn.shopify.com/s/files/1/0532/0546/7332/t/9/assets/brow-code_entry-page_retail_785x.jpg?v=96118312172429472841647824823" alt="Natural hair beauty portrait" loading="lazy" /><figcaption><span>Silk finish</span><strong>Golden Hour</strong></figcaption></figure>
+          <figure><img src="https://ik.imagekit.io/4lndq5ke52/sheer_elegance/confirm1.png?" alt="Editorial natural hairstyle" loading="lazy" /><figcaption><span>Editorial</span><strong>Soft Sculpture</strong></figcaption></figure>
+          <figure><img src="https://ik.imagekit.io/4lndq5ke52/sheer_elegance/hairstyle_07.png?v=96118312172429472841647824823" alt="Natural hair beauty portrait" loading="lazy" /><figcaption><span>Silk finish</span><strong>Golden Hour</strong></figcaption></figure>
         </div>
       </section>
 
