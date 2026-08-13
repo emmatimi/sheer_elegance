@@ -529,7 +529,6 @@ export default function Home() {
               <p className="step-label">04 - Payment and confirmation</p>
               <div><span>Service</span><strong>{selectedService.name}</strong></div>
               {selectedHairstyle && <div><span>Hairstyle</span><strong>{selectedHairstyle.name}</strong></div>}
-              {selectedHairstyle && <div><span>Category</span><strong>{selectedHairstyle.category}</strong></div>}
               <div><span>Date</span><strong>{date}</strong></div>
               <div><span>Time</span><strong>{time}</strong></div>
               <div><span>Name</span><strong>{details.name}</strong></div>

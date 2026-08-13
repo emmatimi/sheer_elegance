@@ -636,7 +636,6 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
                         <div>
                           <strong>Hairstyle chosen</strong>
                           <span>{booking.hairstyleName}</span>
-                          {booking.hairstyleCategory && <small>{booking.hairstyleCategory}</small>}
                           {booking.hairstyleDescription && <p>{booking.hairstyleDescription}</p>}
                         </div>
                       </div>
@@ -995,6 +994,5 @@ function slugify(value: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
 }
-
 
 

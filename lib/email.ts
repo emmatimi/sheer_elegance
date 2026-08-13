@@ -276,18 +276,13 @@ function adminBookingEmail(booking: Booking, settings: SalonSettings, logoUrl: s
 
 function hairstyleRows(booking: Booking): Array<[string, string]> {
   if (!booking.hairstyleName) return [];
-  return [[
-    "Hairstyle inspiration",
-    `${booking.hairstyleName}${booking.hairstyleCategory ? ` (${booking.hairstyleCategory})` : ""}`,
-  ]];
+  return [["Hairstyle", booking.hairstyleName]];
 }
 
 function hairstyleBlock(booking: Booking, options: { allowDataImage?: boolean } = {}) {
   if (!booking.hairstyleName && !booking.hairstyleImageUrl && !booking.hairstyleDescription) return "";
   const imageUrl = emailSafeImageUrl(booking.hairstyleImageUrl, { allowDataImage: options.allowDataImage });
-  const title = booking.hairstyleName
-    ? `${escapeHtml(booking.hairstyleName)}${booking.hairstyleCategory ? ` · ${escapeHtml(booking.hairstyleCategory)}` : ""}`
-    : "";
+  const title = booking.hairstyleName ? escapeHtml(booking.hairstyleName) : "";
   return `
     <p style="margin:20px 0 8px;color:#8d7132">Hairstyle reference</p>
     ${title ? `<p style="margin:0 0 8px;font-weight:700">${title}</p>` : ""}
