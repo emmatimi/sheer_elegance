@@ -24,15 +24,14 @@ export async function POST(request: Request) {
       return Response.json({ error: "Service not found" }, { status: 400 });
     }
 
-    const paymentAmountNaira = paymentAmountFor(booking.paymentOption, service.priceNaira);
-    const paymentReference = booking.paymentOption === "pay_on_arrival"
-      ? null
-      : `sheer-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    const paymentAmountNaira = 0;
+    const paymentReference = null;
     const result = await createBooking({
       ...booking,
+      paymentOption: "pay_on_arrival",
       paymentAmountNaira,
       paymentReference,
-      status: booking.paymentOption === "pay_on_arrival" ? "confirmed" : "pending",
+      status: "confirmed",
     }) as ResultSetHeader;
     const savedBooking = await getBooking(result.insertId);
     if (!savedBooking) {
@@ -40,7 +39,7 @@ export async function POST(request: Request) {
     }
 
     const settings = await getSalonSettings();
-    if (booking.paymentOption !== "pay_on_arrival" && paymentReference) {
+    if (false && paymentReference) {
       const monnify = await initializeMonnifyTransaction({
         amount: paymentAmountNaira,
         customerName: booking.customerName,
@@ -84,6 +83,7 @@ function parseBooking(payload: unknown) {
   const appointmentDate = requiredString(data.appointmentDate, "appointmentDate");
   const appointmentTime = requiredString(data.appointmentTime, "appointmentTime");
   const paymentOption = parsePaymentOption(data.paymentOption);
+  const hairstyle = parseHairstyle(data.hairstyle);
 
   if (!Number.isInteger(serviceId) || serviceId < 1) {
     throw new Error("serviceId must be a valid service id");
@@ -102,7 +102,22 @@ function parseBooking(payload: unknown) {
     paymentAmountNaira: 0,
     paymentReference: null,
     notes: typeof data.notes === "string" ? data.notes.trim() : undefined,
+    hairstyleName: hairstyle?.name ?? null,
+    hairstyleCategory: hairstyle?.category ?? null,
+    hairstyleImageUrl: hairstyle?.imageUrl ?? null,
+    hairstyleDescription: hairstyle?.description ?? null,
   };
+}
+
+function parseHairstyle(value: unknown) {
+  if (!value || typeof value !== "object") return null;
+  const item = value as Record<string, unknown>;
+  const name = optionalString(item.name);
+  const category = optionalString(item.category);
+  const imageUrl = optionalString(item.imageUrl);
+  const description = optionalString(item.description);
+  if (!name || !imageUrl) return null;
+  return { name, category, imageUrl, description };
 }
 
 function paymentAmountFor(option: PaymentOption, priceNaira: number) {
@@ -129,4 +144,8 @@ function requiredString(value: unknown, field: string) {
     throw new Error(`${field} is required`);
   }
   return value.trim();
+}
+
+function optionalString(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }

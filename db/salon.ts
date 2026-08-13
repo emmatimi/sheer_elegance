@@ -14,6 +14,17 @@ export type Service = {
   sortOrder: number;
 };
 
+export type Hairstyle = {
+  id: number;
+  name: string;
+  slug: string;
+  category: string;
+  imageUrl: string;
+  description: string;
+  tags: string[];
+  sortOrder: number;
+};
+
 export type SalonSettings = {
   studioAddress: string;
   phone: string;
@@ -40,6 +51,10 @@ export type Booking = {
   receiptHtml: string | null;
   status: "pending" | "confirmed" | "completed" | "cancelled";
   notes: string | null;
+  hairstyleName: string | null;
+  hairstyleCategory: string | null;
+  hairstyleImageUrl: string | null;
+  hairstyleDescription: string | null;
   createdAt: string;
 };
 
@@ -83,7 +98,22 @@ type BookingRow = RowDataPacket & {
   receipt_html: string | null;
   status: Booking["status"];
   notes: string | null;
+  hairstyle_name: string | null;
+  hairstyle_category: string | null;
+  hairstyle_image_url: string | null;
+  hairstyle_description: string | null;
   created_at: Date | string;
+};
+
+type HairstyleRow = RowDataPacket & {
+  id: number;
+  name: string;
+  slug: string;
+  category: string;
+  image_url: string;
+  description: string;
+  tags: string;
+  sort_order: number;
 };
 
 type BookedTimeRow = RowDataPacket & {
@@ -104,6 +134,61 @@ export async function getServices() {
   );
 
   return rows.map(toService);
+}
+
+export async function getHairstyles() {
+  const rows = await queryRows<HairstyleRow>(
+    `SELECT id, name, slug, category, image_url, description, tags, sort_order
+     FROM hairstyles
+     ORDER BY sort_order ASC, id ASC`,
+  );
+  return rows.map(toHairstyle);
+}
+
+export async function saveHairstyles(hairstyles: Hairstyle[]) {
+  await withDbConnection(async (connection) => {
+    try {
+      await connection.beginTransaction();
+      for (const hairstyle of hairstyles) {
+        const values = [
+          hairstyle.name,
+          hairstyle.slug,
+          hairstyle.category,
+          hairstyle.imageUrl,
+          hairstyle.description,
+          hairstyle.tags.join(","),
+          hairstyle.sortOrder,
+        ];
+
+        if (hairstyle.id > 0) {
+          await connection.query(
+            `UPDATE hairstyles
+             SET name = ?, slug = ?, category = ?, image_url = ?,
+               description = ?, tags = ?, sort_order = ?
+             WHERE id = ?`,
+            [...values, hairstyle.id],
+          );
+        } else {
+          await connection.query(
+            `INSERT INTO hairstyles
+              (name, slug, category, image_url, description, tags, sort_order)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            values,
+          );
+        }
+      }
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    }
+  });
+}
+
+export async function deleteHairstyle(id: number) {
+  await withDbConnection(async (connection) =>
+    connection.query(`DELETE FROM hairstyles WHERE id = ?`, [id]),
+  );
 }
 
 export async function saveServices(services: Service[]) {
@@ -149,6 +234,12 @@ export async function saveServices(services: Service[]) {
       throw error;
     }
   });
+}
+
+export async function deleteService(id: number) {
+  await withDbConnection(async (connection) =>
+    connection.query(`DELETE FROM services WHERE id = ?`, [id]),
+  );
 }
 
 export async function getSalonSettings(): Promise<SalonSettings> {
@@ -201,15 +292,21 @@ export async function createBooking(input: {
   paymentReference?: string | null;
   status?: Booking["status"];
   notes?: string;
+  hairstyleName?: string | null;
+  hairstyleCategory?: string | null;
+  hairstyleImageUrl?: string | null;
+  hairstyleDescription?: string | null;
 }) {
   const [result] = await withDbConnection(async (connection) =>
     connection.query(
       `INSERT INTO bookings (
         service_id, stylist_name, customer_name, customer_phone, customer_email,
         appointment_date, appointment_time, payment_option, payment_status,
-        payment_amount_naira, payment_reference, status, notes
+        payment_amount_naira, payment_reference, status, notes,
+        hairstyle_name, hairstyle_category, hairstyle_image_url, hairstyle_description
       ) VALUES (
         ?, ?, ?, ?, ?,
+        ?, ?, ?, ?,
         ?, ?, ?, ?,
         ?, ?, ?, ?
       )`,
@@ -227,6 +324,10 @@ export async function createBooking(input: {
         input.paymentReference ?? null,
         input.status ?? "pending",
         input.notes ?? null,
+        input.hairstyleName ?? null,
+        input.hairstyleCategory ?? null,
+        input.hairstyleImageUrl ?? null,
+        input.hairstyleDescription ?? null,
       ],
     ),
   );
@@ -256,7 +357,10 @@ export async function getBooking(id: number) {
       bookings.customer_email, bookings.appointment_date, bookings.appointment_time,
       bookings.payment_option, bookings.payment_status, bookings.payment_amount_naira,
       bookings.amount_paid_naira, bookings.payment_reference, bookings.transaction_reference,
-      bookings.receipt_html, bookings.status, bookings.notes, bookings.created_at
+      bookings.receipt_html, bookings.status, bookings.notes,
+      bookings.hairstyle_name, bookings.hairstyle_category,
+      bookings.hairstyle_image_url, bookings.hairstyle_description,
+      bookings.created_at
      FROM bookings
      INNER JOIN services ON services.id = bookings.service_id
      WHERE bookings.id = ?
@@ -274,7 +378,10 @@ export async function getBookings() {
       bookings.customer_email, bookings.appointment_date, bookings.appointment_time,
       bookings.payment_option, bookings.payment_status, bookings.payment_amount_naira,
       bookings.amount_paid_naira, bookings.payment_reference, bookings.transaction_reference,
-      bookings.receipt_html, bookings.status, bookings.notes, bookings.created_at
+      bookings.receipt_html, bookings.status, bookings.notes,
+      bookings.hairstyle_name, bookings.hairstyle_category,
+      bookings.hairstyle_image_url, bookings.hairstyle_description,
+      bookings.created_at
      FROM bookings
      INNER JOIN services ON services.id = bookings.service_id
      ORDER BY bookings.created_at DESC, bookings.id DESC
@@ -308,7 +415,10 @@ export async function getBookingsPage(page = 1, pageSize = 10, appointmentDate?:
       bookings.customer_email, bookings.appointment_date, bookings.appointment_time,
       bookings.payment_option, bookings.payment_status, bookings.payment_amount_naira,
       bookings.amount_paid_naira, bookings.payment_reference, bookings.transaction_reference,
-      bookings.receipt_html, bookings.status, bookings.notes, bookings.created_at
+      bookings.receipt_html, bookings.status, bookings.notes,
+      bookings.hairstyle_name, bookings.hairstyle_category,
+      bookings.hairstyle_image_url, bookings.hairstyle_description,
+      bookings.created_at
      FROM bookings
      INNER JOIN services ON services.id = bookings.service_id
      ${whereClause}
@@ -336,7 +446,10 @@ export async function getBookingByPaymentReference(paymentReference: string) {
       bookings.customer_email, bookings.appointment_date, bookings.appointment_time,
       bookings.payment_option, bookings.payment_status, bookings.payment_amount_naira,
       bookings.amount_paid_naira, bookings.payment_reference, bookings.transaction_reference,
-      bookings.receipt_html, bookings.status, bookings.notes, bookings.created_at
+      bookings.receipt_html, bookings.status, bookings.notes,
+      bookings.hairstyle_name, bookings.hairstyle_category,
+      bookings.hairstyle_image_url, bookings.hairstyle_description,
+      bookings.created_at
      FROM bookings
      INNER JOIN services ON services.id = bookings.service_id
      WHERE bookings.payment_reference = ?
@@ -387,6 +500,19 @@ function toService(row: ServiceRow): Service {
   };
 }
 
+function toHairstyle(row: HairstyleRow): Hairstyle {
+  return {
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    category: row.category,
+    imageUrl: row.image_url,
+    description: row.description,
+    tags: row.tags.split(",").map((tag) => tag.trim()).filter(Boolean),
+    sortOrder: row.sort_order,
+  };
+}
+
 function toBooking(row: BookingRow): Booking {
   return {
     id: row.id,
@@ -407,6 +533,10 @@ function toBooking(row: BookingRow): Booking {
     receiptHtml: row.receipt_html,
     status: row.status,
     notes: row.notes,
+    hairstyleName: row.hairstyle_name,
+    hairstyleCategory: row.hairstyle_category,
+    hairstyleImageUrl: row.hairstyle_image_url,
+    hairstyleDescription: row.hairstyle_description,
     createdAt:
       row.created_at instanceof Date
         ? row.created_at.toISOString()

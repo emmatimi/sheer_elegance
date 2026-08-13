@@ -94,6 +94,7 @@ export function bookingReceiptHtml(booking: Booking, settings: SalonSettings) {
       ["Receipt no.", booking.paymentReference ?? `booking-${booking.id}`],
       ["Customer", booking.customerName],
       ["Service", booking.serviceName],
+      ...hairstyleRows(booking),
       ["Appointment", `${booking.appointmentDate} - ${booking.appointmentTime}`],
       ["Amount paid", formatNaira(booking.amountPaidNaira)],
       ["Transaction reference", booking.transactionReference ?? "Pending"],
@@ -242,12 +243,14 @@ function customerBookingEmail(booking: Booking, settings: SalonSettings, logoUrl
     <p>Thank you for booking with Oreoluwa Sheer Elegance. We have received your appointment request and our team will confirm shortly.</p>
     ${detailsTable([
       ["Service", booking.serviceName],
+      ...hairstyleRows(booking),
       ["Date", booking.appointmentDate],
       ["Time", booking.appointmentTime],
       ["Address", settings.studioAddress],
       ["Phone", settings.phone],
       ["Payment", paymentSummary(booking)],
     ])}
+    ${hairstyleBlock(booking)}
     <p>Please arrive a few minutes early so we can begin with a calm consultation.</p>
   `, logoUrl);
 }
@@ -260,12 +263,31 @@ function adminBookingEmail(booking: Booking, settings: SalonSettings, logoUrl: s
       ["Phone", booking.customerPhone],
       ["Email", booking.customerEmail],
       ["Service", booking.serviceName],
+      ...hairstyleRows(booking),
       ["Date", booking.appointmentDate],
       ["Time", booking.appointmentTime],
       ["Address", settings.studioAddress],
       ["Payment", paymentSummary(booking)],
     ])}
+    ${hairstyleBlock(booking)}
   `, logoUrl);
+}
+
+function hairstyleRows(booking: Booking): Array<[string, string]> {
+  if (!booking.hairstyleName) return [];
+  return [[
+    "Hairstyle inspiration",
+    `${booking.hairstyleName}${booking.hairstyleCategory ? ` (${booking.hairstyleCategory})` : ""}`,
+  ]];
+}
+
+function hairstyleBlock(booking: Booking) {
+  if (!booking.hairstyleImageUrl) return "";
+  return `
+    <p style="margin:20px 0 8px;color:#8d7132">Hairstyle reference</p>
+    <img src="${escapeHtml(booking.hairstyleImageUrl)}" alt="${escapeHtml(booking.hairstyleName ?? "Hairstyle reference")}" style="width:100%;max-height:360px;object-fit:cover;border:1px solid #ded6ca" />
+    ${booking.hairstyleDescription ? `<p>${escapeHtml(booking.hairstyleDescription)}</p>` : ""}
+  `;
 }
 
 function layout(content: string, logoUrl: string) {

@@ -2,7 +2,7 @@
 
 import { DragEvent, FormEvent, MouseEvent, useEffect, useMemo, useState } from "react";
 
-type AdminSection = "bookings" | "services" | "settings";
+type AdminSection = "bookings" | "services" | "service-guide" | "hairstyles" | "settings";
 
 type ServiceRecord = {
   id: number;
@@ -14,6 +14,17 @@ type ServiceRecord = {
   imageUrl: string;
   shortDescription: string;
   isFeatured: boolean;
+  sortOrder: number;
+};
+
+type HairstyleRecord = {
+  id: number;
+  name: string;
+  slug: string;
+  category: string;
+  imageUrl: string;
+  description: string;
+  tags: string[];
   sortOrder: number;
 };
 
@@ -40,6 +51,10 @@ type BookingRecord = {
   paymentReference: string | null;
   transactionReference: string | null;
   receiptHtml: string | null;
+  hairstyleName: string | null;
+  hairstyleCategory: string | null;
+  hairstyleImageUrl: string | null;
+  hairstyleDescription: string | null;
   status: string;
   createdAt: string;
 };
@@ -58,6 +73,19 @@ const defaultSettings: SalonSettings = {
   openingHours: "Tue-Fri 9am-7pm, Sat 8am-6pm",
 };
 
+const serviceGuide = [
+  ["Braiding", "knotless braids, box braids, cornrows, Ghana weaving, stitch braids, feed-in braids, lemonade braids, Fulani braids, tribal braids, bohemian braids, crochet braids, twist braids, Senegalese twists and passion twists."],
+  ["Natural hair styling", "afro styling, puff styling, two-strand twists, flat twists, bantu knots, natural updos, finger coils, wash-and-go styling and protective natural hairstyles."],
+  ["Ponytails and buns", "sleek ponytails, braided ponytails, curly ponytails, high ponytails, low ponytails, afro ponytails, sleek buns, braided buns, doughnut buns and bridal buns."],
+  ["Wig and weave services", "wig installation, frontal installation, closure installation, sew-ins, quick weaves, wig revamping, wig styling, wig customization and lace melting."],
+  ["Hair extensions", "clip-ins, tape-ins, micro-links, ponytail extensions, crochet extensions and added-volume styling."],
+  ["Relaxed and straight hair styling", "silk press, blow-dry and straightening, roller sets, wrap styling, curls, waves and sleek styling."],
+  ["Loc services", "starter locs, retwisting, loc styling, interlocking, faux locs, butterfly locs, soft locs and loc extensions."],
+  ["Bridal and occasion styling", "bridal updos, bridesmaid hairstyles, traditional wedding hairstyles, birthday hairstyles, prom styling, formal updos and hair-accessory installation."],
+  ["Children’s hairstyling", "kids’ cornrows, braids, beads, twists, ponytails and natural protective styles."],
+  ["Hair preparation and finishing", "washing, conditioning, detangling, blow-drying, trimming, edge styling, hair treatment and scalp treatment."],
+];
+
 export function AdminDashboard({ section }: { section: AdminSection }) {
   const [activeSection, setActiveSection] = useState<AdminSection>(section);
   const [checkingSession, setCheckingSession] = useState(true);
@@ -65,16 +93,22 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
   const [loginError, setLoginError] = useState("");
   const [status, setStatus] = useState("");
   const [services, setServices] = useState<ServiceRecord[]>([]);
+  const [hairstyles, setHairstyles] = useState<HairstyleRecord[]>([]);
   const [bookings, setBookings] = useState<BookingRecord[]>([]);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, pageSize: 8, total: 0, totalPages: 1 });
   const [settings, setSettings] = useState<SalonSettings>(defaultSettings);
   const [savingServices, setSavingServices] = useState(false);
   const [savingServiceId, setSavingServiceId] = useState<number | null>(null);
+  const [savingHairstyles, setSavingHairstyles] = useState(false);
+  const [savingHairstyleId, setSavingHairstyleId] = useState<number | null>(null);
   const [savingSettings, setSavingSettings] = useState(false);
   const [bookingDate, setBookingDate] = useState("");
   const [serviceModalOpen, setServiceModalOpen] = useState(false);
+  const [hairstyleModalOpen, setHairstyleModalOpen] = useState(false);
   const [editingServices, setEditingServices] = useState<Record<number, ServiceRecord>>({});
+  const [editingHairstyles, setEditingHairstyles] = useState<Record<number, HairstyleRecord>>({});
   const [modalImageUrl, setModalImageUrl] = useState("");
+  const [hairstyleModalImageUrl, setHairstyleModalImageUrl] = useState("");
   const [previewImageUrl, setPreviewImageUrl] = useState("");
 
   useEffect(() => {
@@ -92,6 +126,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
     if (!loggedIn) return;
     if (activeSection === "bookings") void loadBookings(1);
     if (activeSection === "services") void loadServices();
+    if (activeSection === "hairstyles") void loadHairstyles();
     if (activeSection === "settings") void loadSettings();
   }, [loggedIn, activeSection, bookingDate]);
 
@@ -115,6 +150,16 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
     }
     const payload = await response.json();
     setServices(payload.services ?? []);
+  }
+
+  async function loadHairstyles() {
+    const response = await fetch("/api/admin/hairstyles");
+    if (!response.ok) {
+      setStatus("Unable to load hairstyles.");
+      return;
+    }
+    const payload = await response.json();
+    setHairstyles(payload.hairstyles ?? []);
   }
 
   async function loadSettings() {
@@ -166,30 +211,12 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const name = String(form.get("name") ?? "").trim();
-    const category = String(form.get("category") ?? "").trim();
     const slug = String(form.get("slug") ?? "").trim() || slugify(name);
     const shortDescription = String(form.get("shortDescription") ?? "").trim();
     const imageUrl = modalImageUrl;
-    const priceNaira = Number(form.get("priceNaira") ?? 0);
-    const durationHours = Number(form.get("durationHours") ?? 0);
-    const extraMinutes = Number(form.get("durationMinutes") ?? 0);
-    const durationMinutes = (durationHours * 60) + extraMinutes;
 
-    if (!name || !category || !shortDescription || !imageUrl) {
-      setStatus("Service name, category, image and description are required.");
-      return;
-    }
-    if (
-      !Number.isFinite(priceNaira) ||
-      priceNaira < 0 ||
-      !Number.isInteger(durationHours) ||
-      durationHours < 0 ||
-      !Number.isInteger(extraMinutes) ||
-      extraMinutes < 0 ||
-      extraMinutes > 59 ||
-      durationMinutes < 1
-    ) {
-      setStatus("Service price must be valid, and duration must be at least 1 minute. Minutes should be 0-59.");
+    if (!name || !shortDescription || !imageUrl) {
+      setStatus("Service name, image and hairstyle list are required.");
       return;
     }
 
@@ -199,9 +226,9 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
         id: -Date.now(),
         name,
         slug,
-        category,
-        priceNaira,
-        durationMinutes,
+        category: name,
+        priceNaira: 0,
+        durationMinutes: 0,
         imageUrl,
         shortDescription,
         isFeatured: false,
@@ -289,6 +316,12 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
     readImageFile(event.dataTransfer.files[0], setModalImageUrl);
   }
 
+  function dropHairstyleModalImage(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    event.currentTarget.classList.remove("dragging");
+    readImageFile(event.dataTransfer.files[0], setHairstyleModalImageUrl);
+  }
+
   async function persistServices(nextServices: ServiceRecord[]) {
     const response = await fetch("/api/admin/services", {
       method: "PUT",
@@ -318,6 +351,141 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
     }
   }
 
+  async function deleteServiceCard(serviceId: number) {
+    const service = services.find((item) => item.id === serviceId);
+    if (!service || !window.confirm(`Delete "${service.name}"? This cannot be undone.`)) return;
+    setStatus("");
+    try {
+      const response = await fetch(`/api/admin/services?id=${serviceId}`, { method: "DELETE" });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error ?? "Unable to delete service.");
+      setServices(payload.services ?? services.filter((item) => item.id !== serviceId));
+      setStatus("Service deleted.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Unable to delete service.");
+    }
+  }
+
+  async function addHairstyleFromModal(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const name = String(form.get("name") ?? "").trim();
+    const category = String(form.get("category") ?? services[0]?.name ?? "").trim();
+    const slug = String(form.get("slug") ?? "").trim() || slugify(name);
+    const description = String(form.get("description") ?? "").trim();
+    const tags = String(form.get("tags") ?? "").split(",").map((tag) => tag.trim()).filter(Boolean);
+    const imageUrl = hairstyleModalImageUrl;
+
+    if (!name || !category || !description || !imageUrl) {
+      setStatus("Hairstyle name, category, image and description are required.");
+      return;
+    }
+
+    const nextHairstyles = [
+      ...hairstyles,
+      {
+        id: -Date.now(),
+        name,
+        slug,
+        category,
+        imageUrl,
+        description,
+        tags,
+        sortOrder: hairstyles.length + 1,
+      },
+    ];
+
+    setSavingHairstyles(true);
+    setStatus("");
+    try {
+      await persistHairstyles(nextHairstyles);
+      setHairstyleModalOpen(false);
+      setHairstyleModalImageUrl("");
+      event.currentTarget.reset();
+      setStatus("New hairstyle saved.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Unable to save new hairstyle.");
+    } finally {
+      setSavingHairstyles(false);
+    }
+  }
+
+  function startEditingHairstyle(hairstyle: HairstyleRecord) {
+    setEditingHairstyles((current) => ({ ...current, [hairstyle.id]: { ...hairstyle } }));
+    setStatus("");
+  }
+
+  function cancelEditingHairstyle(hairstyleId: number) {
+    setEditingHairstyles((current) => {
+      const next = { ...current };
+      delete next[hairstyleId];
+      return next;
+    });
+    setStatus("");
+  }
+
+  function updateHairstyleDraft(hairstyleId: number, field: keyof HairstyleRecord, value: string | number | string[]) {
+    setEditingHairstyles((current) => {
+      const draft = current[hairstyleId];
+      if (!draft) return current;
+      return { ...current, [hairstyleId]: { ...draft, [field]: value } };
+    });
+  }
+
+  function uploadHairstyleImage(hairstyleId: number, file: File | undefined) {
+    readImageFile(file, (imageUrl) => updateHairstyleDraft(hairstyleId, "imageUrl", imageUrl));
+  }
+
+  function dropHairstyleImage(event: DragEvent<HTMLLabelElement>, hairstyleId: number) {
+    event.preventDefault();
+    event.currentTarget.classList.remove("dragging");
+    uploadHairstyleImage(hairstyleId, event.dataTransfer.files[0]);
+  }
+
+  async function persistHairstyles(nextHairstyles: HairstyleRecord[]) {
+    const response = await fetch("/api/admin/hairstyles", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ hairstyles: nextHairstyles }),
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(payload?.error ?? "Unable to save hairstyles.");
+    setHairstyles(payload.hairstyles ?? nextHairstyles);
+    return payload.hairstyles ?? nextHairstyles;
+  }
+
+  async function saveHairstyle(hairstyleId: number) {
+    const draft = editingHairstyles[hairstyleId];
+    if (!draft) return;
+    setSavingHairstyleId(hairstyleId);
+    setStatus("");
+    try {
+      const nextHairstyles = hairstyles.map((hairstyle) => hairstyle.id === hairstyleId ? draft : hairstyle);
+      await persistHairstyles(nextHairstyles);
+      cancelEditingHairstyle(hairstyleId);
+      setStatus("Hairstyle saved.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Unable to save hairstyle.");
+    } finally {
+      setSavingHairstyleId(null);
+    }
+  }
+
+  async function deleteHairstyleCard(hairstyleId: number) {
+    const hairstyle = hairstyles.find((item) => item.id === hairstyleId);
+    if (!hairstyle || !window.confirm(`Delete "${hairstyle.name}"? This cannot be undone.`)) return;
+    setStatus("");
+    try {
+      const response = await fetch(`/api/admin/hairstyles?id=${hairstyleId}`, { method: "DELETE" });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error ?? "Unable to delete hairstyle.");
+      setHairstyles(payload.hairstyles ?? hairstyles.filter((item) => item.id !== hairstyleId));
+      setStatus("Hairstyle deleted.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Unable to delete hairstyle.");
+    }
+  }
+
   async function saveSettings(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSavingSettings(true);
@@ -342,6 +510,8 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
   const title = useMemo(() => ({
     bookings: "Bookings",
     services: "Services",
+    "service-guide": "Service guide",
+    hairstyles: "Hairstyles",
     settings: "Salon details",
   })[activeSection], [activeSection]);
 
@@ -371,6 +541,8 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
         <nav>
           <a className={activeSection === "bookings" ? "active" : ""} href="/admin/bookings" onClick={(event) => openSection(event, "bookings")}>Bookings</a>
           <a className={activeSection === "services" ? "active" : ""} href="/admin/services" onClick={(event) => openSection(event, "services")}>Services</a>
+          <a className={activeSection === "service-guide" ? "active" : ""} href="/admin/service-guide" onClick={(event) => openSection(event, "service-guide")}>Service guide</a>
+          <a className={activeSection === "hairstyles" ? "active" : ""} href="/admin/hairstyles" onClick={(event) => openSection(event, "hairstyles")}>Hairstyles</a>
           <a className={activeSection === "settings" ? "active" : ""} href="/admin/settings" onClick={(event) => openSection(event, "settings")}>Salon details</a>
         </nav>
         <button onClick={signOut}>Sign out</button>
@@ -402,6 +574,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
                     <p>{booking.appointmentDate} · {booking.appointmentTime}</p>
                     <h3>{booking.customerName}</h3>
                     <span>{booking.serviceName}</span>
+                    {booking.hairstyleName && <span>Inspired by: {booking.hairstyleName}</span>}
                     <span>{booking.customerPhone} · {booking.customerEmail}</span>
                   </div>
                   <div className="booking-meta">
@@ -410,6 +583,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
                     {booking.paymentStatus !== "not_required" && <span>Payment: {booking.paymentStatus}</span>}
                     {booking.paymentReference && <span>Ref: {booking.paymentReference}</span>}
                     {booking.transactionReference && <span>Txn: {booking.transactionReference}</span>}
+                    {booking.hairstyleImageUrl && <a href={booking.hairstyleImageUrl} target="_blank" rel="noreferrer">View hairstyle reference</a>}
                     {booking.receiptHtml
                       ? <a href={downloadReceiptUrl(booking)} download={`receipt-${booking.id}.html`}>Download receipt</a>
                       : <span>No receipt yet</span>}
@@ -430,9 +604,10 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
             <div className="admin-panel-heading">
               <div>
                 <h2>Salon services</h2>
-                <p>Edit service cards, prices, timing and images. Changes are published only when you press save.</p>
+                <p>Edit service names, hairstyle lists and images. Use the guide if you need the recommended service structure.</p>
               </div>
               <div className="admin-button-group">
+                <a className="button ghost" href="/admin/service-guide" onClick={(event) => openSection(event, "service-guide")}>Open guide</a>
                 <button className="button ghost" type="button" onClick={() => setServiceModalOpen(true)}>Add service</button>
               </div>
             </div>
@@ -468,7 +643,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
                     <div className="admin-service-fields">
                       <div className="admin-service-card-head wide">
                         <div>
-                          <p>#{index + 1} · {service.category}</p>
+                          <p>Service #{index + 1} · {service.slug}</p>
                           <h3>{service.name}</h3>
                         </div>
                         {isEditing ? (
@@ -477,31 +652,28 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
                               {savingServiceId === service.id ? "Saving..." : "Save"}
                             </button>
                             <button type="button" onClick={() => cancelEditingService(service.id)}>Cancel</button>
+                            <button className="danger-icon" type="button" aria-label={`Delete ${service.name}`} onClick={() => deleteServiceCard(service.id)}>🗑</button>
                           </div>
                         ) : (
-                          <button className="button ghost" type="button" onClick={() => startEditingService(service)}>Edit</button>
+                          <div className="admin-card-actions">
+                            <button className="button ghost" type="button" onClick={() => startEditingService(service)}>Edit</button>
+                            <button className="danger-icon" type="button" aria-label={`Delete ${service.name}`} onClick={() => deleteServiceCard(service.id)}>🗑</button>
+                          </div>
                         )}
                       </div>
                       {isEditing ? (
                         <>
                           <label className="wide">Service name<input value={editableService.name} onChange={(event) => updateServiceDraft(service.id, "name", event.target.value)} /></label>
                           <label>Slug<input value={editableService.slug} onChange={(event) => updateServiceDraft(service.id, "slug", event.target.value)} /></label>
-                          <label>Category<input value={editableService.category} onChange={(event) => updateServiceDraft(service.id, "category", event.target.value)} /></label>
-                          <label>Price in naira<input type="number" min="0" value={editableService.priceNaira} onChange={(event) => updateServiceDraft(service.id, "priceNaira", event.target.value)} /></label>
-                          <label>Duration hours<input type="number" min="0" value={Math.floor(editableService.durationMinutes / 60)} onChange={(event) => updateServiceDraft(service.id, "durationMinutes", (Number(event.target.value) * 60) + (editableService.durationMinutes % 60))} /></label>
-                          <label>Duration minutes<input type="number" min="0" max="59" value={editableService.durationMinutes % 60} onChange={(event) => updateServiceDraft(service.id, "durationMinutes", (Math.floor(editableService.durationMinutes / 60) * 60) + Number(event.target.value))} /></label>
-                          <label>Sort order<input type="number" value={editableService.sortOrder} onChange={(event) => updateServiceDraft(service.id, "sortOrder", event.target.value)} /></label>
-                          <label className="wide">Description<textarea value={editableService.shortDescription} onChange={(event) => updateServiceDraft(service.id, "shortDescription", event.target.value)} /></label>
+                          <label>Display order<input type="number" value={editableService.sortOrder} onChange={(event) => updateServiceDraft(service.id, "sortOrder", event.target.value)} /></label>
+                          <label className="wide">Hairstyles under this service<textarea value={editableService.shortDescription} onChange={(event) => updateServiceDraft(service.id, "shortDescription", event.target.value)} /></label>
                         </>
                       ) : (
                         <div className="admin-service-readonly wide">
-                          <p>{service.shortDescription}</p>
-                          <dl>
-                            <div><dt>Slug</dt><dd>{service.slug}</dd></div>
-                            <div><dt>Price</dt><dd>{formatNaira(service.priceNaira)}</dd></div>
-                            <div><dt>Duration</dt><dd>{formatDuration(service.durationMinutes)}</dd></div>
-                            <div><dt>Sort</dt><dd>{service.sortOrder}</dd></div>
-                          </dl>
+                          <span className="admin-service-list-label">Styles included</span>
+                          <ul className="admin-service-bullet-list">
+                            {toListItems(service.shortDescription).map((item) => <li key={item}>{item}</li>)}
+                          </ul>
                         </div>
                       )}
                     </div>
@@ -510,6 +682,119 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
                   })()}
                 </article>
               ))}
+            </div>
+          </section>
+        )}
+
+        {activeSection === "service-guide" && (
+          <section className="admin-panel">
+            <div className="admin-panel-heading">
+              <div>
+                <h2>Service guide</h2>
+                <p>Use these recommended service groups and lists when creating service cards.</p>
+              </div>
+              <div className="admin-button-group">
+                <a className="button ghost" href="/admin/services" onClick={(event) => openSection(event, "services")}>Back to services</a>
+              </div>
+            </div>
+            <div className="admin-service-guide standalone">
+              <div>
+                {serviceGuide.map(([name, description]) => (
+                  <article key={name}>
+                    <strong>{name}</strong>
+                    <span>{description}</span>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {activeSection === "hairstyles" && (
+          <section className="admin-panel">
+            <div className="admin-panel-heading">
+              <div>
+                <h2>Hairstyle library</h2>
+                <p>Manage the hairstyle inspiration customers can browse and book from.</p>
+              </div>
+              <div className="admin-button-group">
+                <button className="button ghost" type="button" onClick={() => setHairstyleModalOpen(true)}>Add hairstyle</button>
+              </div>
+            </div>
+            <div className="admin-service-list">
+              {hairstyles.map((hairstyle, index) => {
+                const draft = editingHairstyles[hairstyle.id];
+                const editableHairstyle = draft ?? hairstyle;
+                const isEditing = Boolean(draft);
+                return (
+                  <article key={hairstyle.id}>
+                    <div className="admin-service-editor">
+                      {isEditing ? (
+                        <label
+                          className="admin-image-drop"
+                          onDragOver={(event) => {
+                            event.preventDefault();
+                            event.currentTarget.classList.add("dragging");
+                          }}
+                          onDragLeave={(event) => event.currentTarget.classList.remove("dragging")}
+                          onDrop={(event) => dropHairstyleImage(event, hairstyle.id)}
+                        >
+                          <img src={editableHairstyle.imageUrl} alt="" />
+                          <span>Drop image here or click to upload</span>
+                          <input type="file" accept="image/*" onChange={(event) => uploadHairstyleImage(hairstyle.id, event.target.files?.[0])} />
+                        </label>
+                      ) : (
+                        <button className="admin-image-preview" type="button" onClick={() => setPreviewImageUrl(hairstyle.imageUrl)}>
+                          <img src={hairstyle.imageUrl} alt="" />
+                          <span>View image</span>
+                        </button>
+                      )}
+                      <div className="admin-service-fields">
+                        <div className="admin-service-card-head wide">
+                          <div>
+                            <p>#{index + 1} · {hairstyle.category}</p>
+                            <h3>{hairstyle.name}</h3>
+                          </div>
+                          {isEditing ? (
+                            <div className="admin-card-actions">
+                              <button className="button gold" type="button" onClick={() => saveHairstyle(hairstyle.id)} disabled={savingHairstyleId === hairstyle.id}>
+                                {savingHairstyleId === hairstyle.id ? "Saving..." : "Save"}
+                              </button>
+                              <button type="button" onClick={() => cancelEditingHairstyle(hairstyle.id)}>Cancel</button>
+                              <button className="danger-icon" type="button" aria-label={`Delete ${hairstyle.name}`} onClick={() => deleteHairstyleCard(hairstyle.id)}>🗑</button>
+                            </div>
+                          ) : (
+                            <div className="admin-card-actions">
+                              <button className="button ghost" type="button" onClick={() => startEditingHairstyle(hairstyle)}>Edit</button>
+                              <button className="danger-icon" type="button" aria-label={`Delete ${hairstyle.name}`} onClick={() => deleteHairstyleCard(hairstyle.id)}>🗑</button>
+                            </div>
+                          )}
+                        </div>
+                        {isEditing ? (
+                          <>
+                            <label className="wide">Hairstyle name<input value={editableHairstyle.name} onChange={(event) => updateHairstyleDraft(hairstyle.id, "name", event.target.value)} /></label>
+                            <label>Slug<input value={editableHairstyle.slug} onChange={(event) => updateHairstyleDraft(hairstyle.id, "slug", event.target.value)} /></label>
+                            <label>Service category<select value={editableHairstyle.category} onChange={(event) => updateHairstyleDraft(hairstyle.id, "category", event.target.value)}>{services.map((service) => <option key={service.id} value={service.name}>{service.name}</option>)}</select></label>
+                            <label>Sort order<input type="number" value={editableHairstyle.sortOrder} onChange={(event) => updateHairstyleDraft(hairstyle.id, "sortOrder", Number(event.target.value))} /></label>
+                            <label className="wide">Tags<input value={editableHairstyle.tags.join(", ")} onChange={(event) => updateHairstyleDraft(hairstyle.id, "tags", event.target.value.split(",").map((tag) => tag.trim()).filter(Boolean))} /></label>
+                            <label className="wide">Description<textarea value={editableHairstyle.description} onChange={(event) => updateHairstyleDraft(hairstyle.id, "description", event.target.value)} /></label>
+                          </>
+                        ) : (
+                          <div className="admin-service-readonly wide">
+                            <p>{hairstyle.description}</p>
+                            <dl>
+                              <div><dt>Slug</dt><dd>{hairstyle.slug}</dd></div>
+                              <div><dt>Category</dt><dd>{hairstyle.category}</dd></div>
+                              <div><dt>Tags</dt><dd>{hairstyle.tags.join(", ") || "None"}</dd></div>
+                              <div><dt>Sort</dt><dd>{hairstyle.sortOrder}</dd></div>
+                            </dl>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           </section>
         )}
@@ -550,10 +835,6 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
             <div className="admin-modal-grid">
               <label className="wide">Service name<input name="name" required placeholder="Silk press and trim" /></label>
               <label>Slug<input name="slug" placeholder="silk-press-and-trim" /></label>
-              <label>Category<input name="category" required placeholder="Signature care" /></label>
-              <label>Price in naira<input name="priceNaira" type="number" min="0" required placeholder="30000" /></label>
-              <label>Duration hours<input name="durationHours" type="number" min="0" defaultValue="1" /></label>
-              <label>Duration minutes<input name="durationMinutes" type="number" min="0" max="59" defaultValue="0" /></label>
               <label
                 className="admin-image-drop wide"
                 onDragOver={(event) => {
@@ -567,11 +848,49 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
                 <span>Drop service image here or click to upload</span>
                 <input type="file" accept="image/*" onChange={(event) => readImageFile(event.target.files?.[0], setModalImageUrl)} />
               </label>
-              <label className="wide">Description<textarea name="shortDescription" required placeholder="Short description customers will see." /></label>
+              <label className="wide">Hairstyles under this service<textarea name="shortDescription" required placeholder="knotless braids, box braids, cornrows..." /></label>
             </div>
             <div className="admin-modal-actions">
               <button type="button" onClick={() => setServiceModalOpen(false)}>Cancel</button>
               <button className="button gold" type="submit" disabled={savingServices}>{savingServices ? "Saving..." : "Save service"}</button>
+            </div>
+          </form>
+        </div>
+      )}
+      {hairstyleModalOpen && (
+        <div className="admin-modal" role="dialog" aria-modal="true" aria-labelledby="add-hairstyle-title">
+          <button className="admin-modal-backdrop" type="button" aria-label="Close add hairstyle modal" onClick={() => setHairstyleModalOpen(false)} />
+          <form className="admin-modal-card" onSubmit={addHairstyleFromModal}>
+            <div className="admin-modal-heading">
+              <div>
+                <p className="eyebrow dark">New hairstyle</p>
+                <h2 id="add-hairstyle-title">Add hairstyle</h2>
+              </div>
+              <button type="button" onClick={() => setHairstyleModalOpen(false)}>×</button>
+            </div>
+            <div className="admin-modal-grid">
+              <label className="wide">Hairstyle name<input name="name" required placeholder="Soft stitch cornrows" /></label>
+              <label>Slug<input name="slug" placeholder="soft-stitch-cornrows" /></label>
+              <label>Service category<select name="category" required defaultValue=""> <option value="" disabled>Select service</option>{services.map((service) => <option key={service.id} value={service.name}>{service.name}</option>)}</select></label>
+              <label className="wide">Tags<input name="tags" placeholder="cornrows, stitch, protective" /></label>
+              <label
+                className="admin-image-drop wide"
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  event.currentTarget.classList.add("dragging");
+                }}
+                onDragLeave={(event) => event.currentTarget.classList.remove("dragging")}
+                onDrop={dropHairstyleModalImage}
+              >
+                {hairstyleModalImageUrl ? <img src={hairstyleModalImageUrl} alt="" /> : <div className="admin-image-empty">No image selected</div>}
+                <span>Drop hairstyle image here or click to upload</span>
+                <input type="file" accept="image/*" onChange={(event) => readImageFile(event.target.files?.[0], setHairstyleModalImageUrl)} />
+              </label>
+              <label className="wide">Description<textarea name="description" required placeholder="Describe the hairstyle inspiration customers will see." /></label>
+            </div>
+            <div className="admin-modal-actions">
+              <button type="button" onClick={() => setHairstyleModalOpen(false)}>Cancel</button>
+              <button className="button gold" type="submit" disabled={savingHairstyles}>{savingHairstyles ? "Saving..." : "Save hairstyle"}</button>
             </div>
           </form>
         </div>
@@ -591,6 +910,13 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
 
 function numericServiceField(field: keyof ServiceRecord) {
   return field === "priceNaira" || field === "durationMinutes" || field === "sortOrder";
+}
+
+function toListItems(value: string) {
+  return value
+    .split(/,|\n/)
+    .map((item) => item.trim().replace(/\.$/, ""))
+    .filter(Boolean);
 }
 
 function paymentLabel(booking: BookingRecord) {
@@ -622,3 +948,5 @@ function slugify(value: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
 }
+
+

@@ -7,7 +7,7 @@ const sans = Manrope({ variable: "--font-sans", subsets: ["latin"], weight: ["40
 const script = Allura({ variable: "--font-script", subsets: ["latin"], weight: "400" });
 
 export const metadata: Metadata = {
-  title: "Sheer Elegance | Luxury Hair Studio in Lagos",
+  title: "Oreoluwa Sheer Elegance | Luxury Hair Studio ",
   description: "Healthy hair, considered styling and an experience designed entirely around you. Book your Sheer Elegance appointment.",
   icons: { icon: "/sheer-elegance-logo.png", shortcut: "/sheer-elegance-logo.png" },
 };

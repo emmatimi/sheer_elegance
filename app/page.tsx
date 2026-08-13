@@ -3,12 +3,12 @@
 import { CSSProperties, FormEvent, MouseEvent, useEffect, useMemo, useState } from "react";
 
 const services = [
-  { id: 1, name: "Silk press and trim", category: "Natural hair", price: "NGN 30,000", priceNaira: 30000, duration: "2 hrs", durationMinutes: 120, image: "https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?auto=format&fit=crop&w=900&q=85" },
-  { id: 2, name: "Boho knotless braids", category: "Protective styling", price: "NGN 65,000", priceNaira: 65000, duration: "5 hrs", durationMinutes: 300, image: "https://images.unsplash.com/photo-1605980776566-0486c3ac7617?auto=format&fit=crop&w=900&q=85" },
-  { id: 3, name: "Frontal wig install", category: "Wigs and lace", price: "NGN 45,000", priceNaira: 45000, duration: "2 hrs 30 min", durationMinutes: 150, image: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=900&q=85" },
-  { id: 4, name: "Ghana weaving cornrows", category: "Braids", price: "NGN 25,000", priceNaira: 25000, duration: "2 hrs 30 min", durationMinutes: 150, image: "https://images.unsplash.com/photo-1616683693504-3ea7e9ad6fec?auto=format&fit=crop&w=900&q=85" },
-  { id: 5, name: "Relaxer retouch and treatment", category: "Hair care", price: "NGN 28,000", priceNaira: 28000, duration: "2 hrs", durationMinutes: 120, image: "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=900&q=85" },
-  { id: 6, name: "Bridal hair styling", category: "Events", price: "NGN 120,000", priceNaira: 120000, duration: "Consultation", durationMinutes: 0, image: "https://images.unsplash.com/photo-1519699047748-de8e457a634e?auto=format&fit=crop&w=900&q=85" },
+  { id: 1, name: "Silk press and trim", category: "Natural hair", price: "NGN 30,000", priceNaira: 30000, duration: "2 hrs", durationMinutes: 120, image: "https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?auto=format&fit=crop&w=900&q=85", shortDescription: "silk press, blow-dry and straightening, curls, waves and sleek styling" },
+  { id: 2, name: "Boho knotless braids", category: "Protective styling", price: "NGN 65,000", priceNaira: 65000, duration: "5 hrs", durationMinutes: 300, image: "https://images.unsplash.com/photo-1605980776566-0486c3ac7617?auto=format&fit=crop&w=900&q=85", shortDescription: "knotless braids, box braids, bohemian braids, twists and protective braids" },
+  { id: 3, name: "Frontal wig install", category: "Wigs and lace", price: "NGN 45,000", priceNaira: 45000, duration: "2 hrs 30 min", durationMinutes: 150, image: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=900&q=85", shortDescription: "wig installation, frontal installation, closure installation, lace melting" },
+  { id: 4, name: "Ghana weaving cornrows", category: "Braids", price: "NGN 25,000", priceNaira: 25000, duration: "2 hrs 30 min", durationMinutes: 150, image: "https://images.unsplash.com/photo-1616683693504-3ea7e9ad6fec?auto=format&fit=crop&w=900&q=85", shortDescription: "cornrows, Ghana weaving, stitch braids, feed-in braids" },
+  { id: 5, name: "Relaxer retouch and treatment", category: "Hair care", price: "NGN 28,000", priceNaira: 28000, duration: "2 hrs", durationMinutes: 120, image: "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=900&q=85", shortDescription: "washing, conditioning, treatments, trimming and scalp care" },
+  { id: 6, name: "Bridal hair styling", category: "Events", price: "NGN 120,000", priceNaira: 120000, duration: "Consultation", durationMinutes: 0, image: "https://images.unsplash.com/photo-1519699047748-de8e457a634e?auto=format&fit=crop&w=900&q=85", shortDescription: "bridal updos, bridesmaid hairstyles, formal styling and accessories" },
 ];
 
 type Service = (typeof services)[number];
@@ -20,6 +20,17 @@ type ApiService = {
   priceNaira: number;
   durationMinutes: number;
   imageUrl: string;
+  shortDescription: string;
+};
+
+type Hairstyle = {
+  id: number;
+  name: string;
+  slug: string;
+  category: string;
+  imageUrl: string;
+  description: string;
+  tags: string[];
 };
 
 const times = ["9:00 AM", "10:30 AM", "12:00 PM", "2:30 PM", "4:00 PM", "5:30 PM"];
@@ -71,6 +82,8 @@ export default function Home() {
   const [confirmed, setConfirmed] = useState(false);
   const [bookingError, setBookingError] = useState("");
   const [bookedTimes, setBookedTimes] = useState<Record<string, string[]>>({});
+  const [hairstyles, setHairstyles] = useState<Hairstyle[]>([]);
+  const [selectedHairstyle, setSelectedHairstyle] = useState<Hairstyle | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -88,6 +101,22 @@ export default function Home() {
       })
       .catch(() => undefined);
 
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/hairstyles")
+      .then((response) => response.ok ? response.json() : Promise.reject())
+      .then((payload: { hairstyles?: Hairstyle[] }) => {
+        if (!active) return;
+        const nextHairstyles = payload.hairstyles ?? [];
+        setHairstyles(nextHairstyles);
+        const slug = new URLSearchParams(window.location.search).get("hairstyle");
+        const matched = nextHairstyles.find((item) => item.slug === slug);
+        if (matched) openBooking(undefined, matched, nextHairstyles);
+      })
+      .catch(() => undefined);
     return () => { active = false; };
   }, []);
 
@@ -203,9 +232,17 @@ export default function Home() {
     if (heroCursor.mode === "right") showNextHeroSlide();
   }
 
-  function openBooking(initialService?: string) {
-    if (initialService) setService(initialService);
-    setStep(1);
+  function openBooking(initialService?: string, hairstyle?: Hairstyle) {
+    if (hairstyle) {
+      setSelectedHairstyle(hairstyle);
+      const matchedService = bestServiceForHairstyle(hairstyle, availableServices);
+      if (matchedService) setService(matchedService.name);
+      setStep(2);
+    } else {
+      if (initialService) setService(initialService);
+      setSelectedHairstyle(null);
+      setStep(1);
+    }
     setConfirmed(false);
     setBookingOpen(true);
   }
@@ -244,6 +281,12 @@ export default function Home() {
         appointmentDate: date,
         appointmentTime: time,
         paymentOption,
+        hairstyle: selectedHairstyle ? {
+          name: selectedHairstyle.name,
+          category: selectedHairstyle.category,
+          imageUrl: selectedHairstyle.imageUrl,
+          description: selectedHairstyle.description,
+        } : null,
       }),
     });
     if (!response.ok) {
@@ -277,6 +320,7 @@ export default function Home() {
       duration: formatDuration(item.durationMinutes),
       durationMinutes: item.durationMinutes,
       image: item.imageUrl,
+      shortDescription: item.shortDescription,
     };
   }
 
@@ -309,11 +353,12 @@ export default function Home() {
         <nav className={menuOpen ? "nav-links open" : "nav-links"} aria-label="Main navigation">
           <a href="#top" onClick={() => setMenuOpen(false)}>Home</a>
           <a href="#services" onClick={() => setMenuOpen(false)}>Services</a>
+          <a href="/hairstyles" onClick={() => setMenuOpen(false)}>Hairstyles</a>
           <a href="#gallery" onClick={() => setMenuOpen(false)}>Our work</a>
           <a href="#about" onClick={() => setMenuOpen(false)}>About</a>
           <a href="#contact" onClick={() => setMenuOpen(false)}>Contact</a>
         </nav>
-        <button className="header-book" onClick={() => openBooking()}>Book now</button>
+        <a className="header-book" href="/book">Book now</a>
         <button className="menu-button" aria-label="Toggle menu" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}><span /><span /></button>
       </header>
 
@@ -334,13 +379,29 @@ export default function Home() {
             <p className="hero-copy">{activeHero.copy}</p>
           </div>
           <div className="hero-actions">
-            <button className="button gold" onClick={() => openBooking()}>Book an appointment <span>↗</span></button>
-            <a className="text-link" href="#services">Explore services <span>↓</span></a>
+            <a className="button gold" href="/book">Book an appointment <span>?</span></a>
+            <a className="text-link" href="#services">Explore services <span>?</span></a>
           </div>
         </div>
-        <div className="hero-index"><span>01</span><i /><span>05</span></div>
         <div className={heroCursor.visible ? "hero-cursor visible" : "hero-cursor"} style={{ left: heroCursor.x, top: heroCursor.y }} aria-hidden="true">
-          {heroCursor.mode === "left" ? "<" : heroCursor.mode === "down" ? "↓" : ">"}
+          {heroCursor.mode === "left" ? "<" : heroCursor.mode === "down" ? "?" : ">"}
+        </div>
+      </section>
+
+      <section className="hairstyle-promo" data-animate>
+        <div>
+          <p className="eyebrow dark">Find your look</p>
+          <h2>Browse styles before you book.</h2>
+          <p>Explore braids, silk press looks, bridal styling and protective inspiration. Pick a hairstyle, book from the gallery, and we’ll attach your chosen reference to your appointment.</p>
+          <a className="button gold" href="/hairstyles">Explore hairstyles <span>?</span></a>
+        </div>
+        <div className="hairstyle-promo-strip">
+          {(hairstyles.length ? hairstyles.slice(0, 3) : availableServices.slice(0, 3).map((item) => ({ id: item.id, name: item.name, imageUrl: item.image, category: item.category }))).map((item) => (
+            <figure key={item.id}>
+              <img src={item.imageUrl} alt={item.name} loading="lazy" />
+              <figcaption>{item.category}</figcaption>
+            </figure>
+          ))}
         </div>
       </section>
 
@@ -348,7 +409,7 @@ export default function Home() {
         <div><span>01</span><p>Choose a service</p><strong>{service}</strong></div>
         <div><span>02</span><p>Select a date</p><strong>{date}</strong></div>
         <div><span>03</span><p>Find your moment</p><strong>{time}</strong></div>
-        <button onClick={() => openBooking()}>Check availability <span>↗</span></button>
+        <a href="/book">Check availability <span>?</span></a>
       </section>
 
       <section className="section services" id="services" data-animate>
@@ -360,7 +421,15 @@ export default function Home() {
           {availableServices.map((item, index) => (
             <article className="service-card" key={item.name}>
               <div className="service-image"><img src={item.image} alt={`${item.name} hairstyle`} loading="lazy" /><span>0{index + 1}</span></div>
-              <div className="service-info"><div><p>{item.category} - {item.duration}</p><h3>{item.name}</h3></div><div><strong>From {item.price}</strong><button aria-label={`Book ${item.name}`} onClick={() => openBooking(item.name)}>↗</button></div></div>
+              <div className="service-info">
+                <div>
+                  <h3>{item.name}</h3>
+                  <ul className="service-style-list">
+                    {toServiceItems(item.shortDescription).map((style) => <li key={style}>{style}</li>)}
+                  </ul>
+                </div>
+                <div><a aria-label={`Book ${item.name}`} href={`/book?service=${encodeURIComponent(item.name)}`}>Book</a></div>
+              </div>
             </article>
           ))}
         </div>
@@ -370,7 +439,7 @@ export default function Home() {
         <div className="contact-copy parallax-content">
           <h2>Come as you are</h2>
           <p className="contact-lead">Book a chair for a thoughtful consultation, healthy styling, silk press, colour refresh, protective install or restorative treatment tailored to your hair.</p>
-          <button className="read-more-button" onClick={() => openBooking()}>Reserve your chair</button>
+          <a className="read-more-button" href="/book">Reserve your chair</a>
         </div>
         <div className="contact-collage parallax-content" aria-label="Sheer Elegance salon moments">
           <img className="collage-left" src="https://ik.imagekit.io/4lndq5ke52/sheer_elegance/hair2.jpeg?auto=format&fit=crop&w=620&q=80" alt="Client in salon chair during a styling appointment" loading="lazy" />
@@ -403,7 +472,7 @@ export default function Home() {
       <section className="gallery" id="gallery" data-animate>
         <div className="gallery-title"><p className="eyebrow dark">Fresh from the chair</p><h2>Made to be<br /><em className="script-word">remembered.</em></h2></div>
         <div className="gallery-grid">
-          <figure className="gallery-main"><img src="https://mindbodygreen-res.cloudinary.com/image/upload/c_crop,x_0,y_684,w_2800,h_1867/c_fill,w_1200,h_800,g_auto,q_90,fl_lossy,f_jpg/org/34g2cg7qikmavaytp.jpg" alt="Natural afro hairstyle" loading="lazy" /><figcaption><span>Natural texture</span><strong>The Halo</strong></figcaption></figure>
+          <figure className="gallery-main"><img src="https://ik.imagekit.io/4lndq5ke52/sheer_elegance/confirm6.png?updatedAt=1786317818552/c_crop,x_0,y_684,w_2800,h_1867/c_fill,w_1200,h_800,g_auto,q_90,fl_lossy,f_jpg/org/34g2cg7qikmavaytp.jpg" alt="Natural afro hairstyle" loading="lazy" /><figcaption><span>Natural texture</span><strong>The Halo</strong></figcaption></figure>
           <figure><img src="https://i.pinimg.com/originals/be/85/eb/be85eb8fb718f89a6fdc2460d604bd9f.png" alt="Editorial natural hairstyle" loading="lazy" /><figcaption><span>Editorial</span><strong>Soft Sculpture</strong></figcaption></figure>
           <figure><img src="https://cdn.shopify.com/s/files/1/0532/0546/7332/t/9/assets/brow-code_entry-page_retail_785x.jpg?v=96118312172429472841647824823" alt="Natural hair beauty portrait" loading="lazy" /><figcaption><span>Silk finish</span><strong>Golden Hour</strong></figcaption></figure>
         </div>
@@ -425,13 +494,13 @@ export default function Home() {
         <div>
           <p className="eyebrow dark">Contact us</p>
           <h2>Ready for your next appointment?</h2>
-          <p>Visit us in Lekki Phase 1 or send a message to plan your silk press, colour service, protective style or restorative treatment.</p>
+          <p>Visit us in Ekiti Phase 1 or send a message to plan your silk press, colour service, protective style or restorative treatment.</p>
         </div>
         <div className="contact-us-details">
           <article><span>Visit</span><p>14 Admiralty Way<br />Akure , Ondo</p></article>
           <article><span>Opening hours</span><p>Tue-Fri - 9am-7pm<br />Sat - 8am-6pm</p></article>
           <article><span>Talk to us</span><p>+234 810 000 2026<br />hello@sheerelegance.ng</p></article>
-          <button className="button gold" onClick={() => openBooking()}>Book an appointment <span>↗</span></button>
+          <a className="button gold contact-us-book-tile" href="/book">Book an appointment <span>?</span></a>
         </div>
       </section>
 
@@ -442,13 +511,21 @@ export default function Home() {
         <div className="booking-panel">
           <div className="booking-top"><div><p>Sheer Elegance</p><h2 id="booking-title">Book your appointment</h2></div><button onClick={() => setBookingOpen(false)} aria-label="Close booking">x</button></div>
           {!confirmed ? <>
-            <div className="stepper">{[1,2,3,4].map((n) => <span key={n} className={step >= n ? "active" : ""}>{n}</span>)}</div>
-            {step === 1 && <div className="booking-step"><p className="step-label">01 - Choose your service</p><div className="option-list">{availableServices.map((item) => <button key={item.name} className={service === item.name ? "selected" : ""} onClick={() => setService(item.name)}><span><b>{item.name}</b><small>{item.category} - {item.duration}</small></span><strong>{item.price}</strong></button>)}</div></div>}
-            {step === 2 && <div className="booking-step"><p className="step-label">02 - Select a date and time</p><div className="calendar-grid">{calendarDays.map((day) => <button key={day.iso} disabled={day.disabled} className={date === day.iso ? "selected" : ""} onClick={() => chooseDate(day)}><span>{day.weekday}</span><strong>{day.day}</strong></button>)}</div><div className="time-grid">{times.map((item) => <button key={item} disabled={bookedTimes[date]?.includes(item)} className={time === item ? "selected" : ""} onClick={() => { setBookingError(""); setTime(item); }}>{item}</button>)}</div>{availableTimes.length === 0 && <p className="admin-error">This day is fully booked. Please choose another date.</p>}{bookingError && <p className="admin-error">{bookingError}</p>}</div>}
+            <div className="stepper">{(selectedHairstyle ? [2,3,4] : [1,2,3,4]).map((n, index) => <span key={n} className={step >= n ? "active" : ""}>{index + 1}</span>)}</div>
+            {step === 1 && <div className="booking-step"><p className="step-label">01 - Choose your service</p><div className="option-list">{availableServices.map((item) => <button key={item.name} className={service === item.name ? "selected" : ""} onClick={() => setService(item.name)}><span><b>{item.name}</b><small>{item.shortDescription}</small></span></button>)}</div></div>}
+            {step === 2 && <div className="booking-step"><p className="step-label">{selectedHairstyle ? "01" : "02"} - Select a date and time</p>{selectedHairstyle && <div className="selected-look-summary"><img src={selectedHairstyle.imageUrl} alt="" /><div><span>Selected look</span><strong>{selectedHairstyle.name}</strong><p>{selectedHairstyle.category}</p></div></div>}<div className="calendar-grid">{calendarDays.map((day) => <button key={day.iso} disabled={day.disabled} className={date === day.iso ? "selected" : ""} onClick={() => chooseDate(day)}><span>{day.weekday}</span><strong>{day.day}</strong></button>)}</div><div className="time-grid">{times.map((item) => <button key={item} disabled={bookedTimes[date]?.includes(item)} className={time === item ? "selected" : ""} onClick={() => { setBookingError(""); setTime(item); }}>{item}</button>)}</div>{availableTimes.length === 0 && <p className="admin-error">This day is fully booked. Please choose another date.</p>}{bookingError && <p className="admin-error">{bookingError}</p>}</div>}
             {step === 3 && <form className="booking-step details-form" id="details-form" onSubmit={(e) => { e.preventDefault(); setStep(4); }}><p className="step-label">03 - Your details</p><label>Full name<input required value={details.name} onChange={(e) => setDetails({...details, name:e.target.value})} placeholder="Ada Okafor" /></label><label>Phone number<input required type="tel" value={details.phone} onChange={(e) => setDetails({...details, phone:e.target.value})} placeholder="+234 800 000 0000" /></label><label>Email address<input required type="email" value={details.email} onChange={(e) => setDetails({...details, email:e.target.value})} placeholder="you@example.com" /></label></form>}
-            {step === 4 && <form className="booking-step summary" onSubmit={submitBooking}><p className="step-label">04 - Payment and confirmation</p><div><span>Service</span><strong>{selectedService.name}</strong></div><div><span>When</span><strong>{date} - {time}</strong></div><div><span>Total</span><strong>{selectedService.price}</strong></div><div className="payment-options"><button type="button" className={paymentOption === "deposit" ? "selected" : ""} onClick={() => setPaymentOption("deposit")}><span>Deposit</span><strong>NGN 10,000</strong></button><button type="button" className={paymentOption === "half" ? "selected" : ""} onClick={() => setPaymentOption("half")}><span>50%</span><strong>{formatNaira(Math.ceil(selectedService.priceNaira / 2))}</strong></button><button type="button" className={paymentOption === "full" ? "selected" : ""} onClick={() => setPaymentOption("full")}><span>Full payment</span><strong>{selectedService.price}</strong></button><button type="button" className={paymentOption === "pay_on_arrival" ? "selected" : ""} onClick={() => setPaymentOption("pay_on_arrival")}><span>Pay at salon</span><strong>Later</strong></button></div><p>{paymentOption === "pay_on_arrival" ? "Your appointment request will be saved without online payment." : `${formatNaira(paymentAmount)} will be paid securely through Monnify.`}</p>{bookingError && <p className="admin-error">{bookingError}</p>}<button className="button gold" type="submit">{paymentOption === "pay_on_arrival" ? "Confirm appointment" : "Continue to payment"}</button></form>}
-            {step < 4 && <div className="booking-actions"><button disabled={step === 1} onClick={() => setStep(step - 1)}>Back</button><button className="next" type={step === 3 ? "submit" : "button"} form={step === 3 ? "details-form" : undefined} disabled={step === 2 && availableTimes.length === 0} onClick={step === 3 ? undefined : () => setStep(step + 1)}>Continue <span>↗</span></button></div>}
-          </> : <div className="confirmation"><span>✓</span><p>Appointment request received</p><h2>We'll see you soon, {details.name.split(" ")[0]}.</h2><div><strong>{selectedService.name}</strong><p>{date} at {time}</p></div><button className="button gold" onClick={() => setBookingOpen(false)}>Back to the website</button></div>}
+            {step === 4 && <form className="booking-step summary" onSubmit={submitBooking}>
+              <p className="step-label">04 - Payment and confirmation</p>
+              <div><span>Service</span><strong>{selectedService.name}</strong></div>
+              {selectedHairstyle && <div><span>Hairstyle inspiration</span><strong>{selectedHairstyle.name}</strong><small>{selectedHairstyle.category}</small></div>}
+              <div><span>When</span><strong>{date} - {time}</strong></div>
+              <p>Your appointment request will be saved. The salon can confirm final service details with you directly.</p>
+              {bookingError && <p className="admin-error">{bookingError}</p>}
+              <button className="button gold" type="submit">{paymentOption === "pay_on_arrival" ? "Confirm appointment" : "Continue to payment"}</button>
+            </form>}
+            {step < 4 && <div className="booking-actions"><button disabled={step === 1 || (selectedHairstyle && step === 2)} onClick={() => setStep(step - 1)}>Back</button><button className="next" type={step === 3 ? "submit" : "button"} form={step === 3 ? "details-form" : undefined} disabled={step === 2 && availableTimes.length === 0} onClick={step === 3 ? undefined : () => setStep(step + 1)}>Continue <span>?</span></button></div>}
+          </> : <div className="confirmation"><span>?</span><p>Appointment request received</p><h2>We'll see you soon, {details.name.split(" ")[0]}.</h2><div><strong>{selectedService.name}</strong><p>{selectedHairstyle ? `Inspired by ${selectedHairstyle.name} · ` : ""}{date} at {time}</p></div><button className="button gold" onClick={() => setBookingOpen(false)}>Back to the website</button></div>}
         </div>
       </div>}
     </main>
@@ -469,6 +546,13 @@ function createCalendarDays(bookedTimes: Record<string, string[]>) {
   });
 }
 
+function toServiceItems(value: string) {
+  return value
+    .split(/,|\n/)
+    .map((item) => item.trim().replace(/\.$/, ""))
+    .filter(Boolean);
+}
+
 async function loadAvailability() {
   const response = await fetch("/api/availability", { cache: "no-store" });
   if (!response.ok) throw new Error("Unable to load availability");
@@ -480,6 +564,24 @@ function firstAvailableTime(date: string, bookedTimes: Record<string, string[]>)
   return times.find((item) => !bookedTimes[date]?.includes(item));
 }
 
+function bestServiceForHairstyle(hairstyle: Hairstyle, availableServices: Service[]) {
+  const text = `${hairstyle.name} ${hairstyle.category} ${hairstyle.tags.join(" ")}`.toLowerCase();
+  const ranked = availableServices
+    .map((service) => {
+      const serviceText = `${service.name} ${service.category}`.toLowerCase();
+      let score = 0;
+      if (text.includes("bridal") && serviceText.includes("bridal")) score += 6;
+      if (text.includes("silk") && serviceText.includes("silk")) score += 6;
+      if ((text.includes("knotless") || text.includes("boho")) && serviceText.includes("knotless")) score += 6;
+      if ((text.includes("cornrow") || text.includes("stitch") || text.includes("ghana")) && (serviceText.includes("ghana") || serviceText.includes("cornrow"))) score += 6;
+      if ((text.includes("wig") || text.includes("lace")) && (serviceText.includes("wig") || serviceText.includes("frontal"))) score += 6;
+      if (text.includes(service.category.toLowerCase())) score += 2;
+      return { service, score };
+    })
+    .sort((a, b) => b.score - a.score);
+  return ranked[0]?.score ? ranked[0].service : availableServices[0];
+}
+
 function paymentAmountFor(
   option: "deposit" | "half" | "full" | "pay_on_arrival",
   priceNaira: number,
@@ -489,3 +591,6 @@ function paymentAmountFor(
   if (option === "full") return priceNaira;
   return 0;
 }
+
+
+
