@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { DragEvent, FormEvent, MouseEvent, useEffect, useMemo, useState } from "react";
 
@@ -834,7 +834,6 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
                           <>
                             <label className="wide">Hairstyle name<input value={editableHairstyle.name} onChange={(event) => updateHairstyleDraft(hairstyle.id, "name", event.target.value)} /></label>
                             <label>Service category<select value={editableHairstyle.category} onChange={(event) => updateHairstyleDraft(hairstyle.id, "category", event.target.value)}>{categoryOptions.map((category) => <option key={category} value={category}>{category}</option>)}</select></label>
-                            <label className="wide">Tags<input value={editableHairstyle.tags.join(", ")} onChange={(event) => updateHairstyleDraft(hairstyle.id, "tags", event.target.value.split(",").map((tag) => tag.trim()).filter(Boolean))} /></label>
                             <label className="wide">Description<textarea value={editableHairstyle.description} onChange={(event) => updateHairstyleDraft(hairstyle.id, "description", event.target.value)} /></label>
                           </>
                         ) : (
@@ -842,7 +841,6 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
                             <p>{hairstyle.description}</p>
                             <dl>
                               <div><dt>Category</dt><dd>{hairstyle.category}</dd></div>
-                              <div><dt>Tags</dt><dd>{hairstyle.tags.join(", ") || "None"}</dd></div>
                             </dl>
                           </div>
                         )}
@@ -932,7 +930,6 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
             <div className="admin-modal-grid">
               <label className="wide">Option name<input name="name" required placeholder="Soft stitch cornrows" /></label>
               <label>Service category<select name="category" required defaultValue=""> <option value="" disabled>Select service category</option>{categoryOptions.map((category) => <option key={category} value={category}>{category}</option>)}</select></label>
-              <label className="wide">Tags<input name="tags" placeholder="cornrows, stitch, protective" /></label>
               <label
                 className="admin-image-drop wide"
                 onDragOver={(event) => {

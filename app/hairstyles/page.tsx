@@ -104,7 +104,6 @@ export default function HairstylesPage() {
               </div>
               <h2>{item.name}</h2>
               <p>{item.description}</p>
-              <div className="hairstyle-tags">{item.tags.map((tag) => <small key={tag}>{tag}</small>)}</div>
               <a className="hairstyle-book-link" href={`/book?option=${item.id}`}>
                 <span>Book this look</span>
               </a>
