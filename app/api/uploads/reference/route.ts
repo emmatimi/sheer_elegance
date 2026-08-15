@@ -1,13 +1,20 @@
-export async function GET() {
-  return createReferenceUploadSignature();
+import { requireAdminSession } from "@/lib/admin-auth";
+
+export async function GET(request: Request) {
+  return createUploadSignature(request);
 }
 
-export async function POST() {
-  return createReferenceUploadSignature();
+export async function POST(request: Request) {
+  return createUploadSignature(request);
 }
 
-async function createReferenceUploadSignature() {
+async function createUploadSignature(request: Request) {
   try {
+    const isAdminAsset = new URL(request.url).searchParams.get("scope") === "admin";
+    if (isAdminAsset) {
+      const session = requireAdminSession(request);
+      if (session instanceof Response) return session;
+    }
     const publicKey = process.env.IMAGEKIT_PUBLIC_KEY?.trim();
     const privateKey = process.env.IMAGEKIT_PRIVATE_KEY?.trim();
     if (!publicKey || !privateKey) {
@@ -24,7 +31,9 @@ async function createReferenceUploadSignature() {
         token,
         expire,
         signature,
-        folder: process.env.IMAGEKIT_UPLOAD_FOLDER?.trim() || "/sheer_elegance/booking-references",
+        folder: isAdminAsset
+          ? `${process.env.IMAGEKIT_UPLOAD_FOLDER?.trim() || "/sheer_elegance/booking-references"}/admin-assets`
+          : process.env.IMAGEKIT_UPLOAD_FOLDER?.trim() || "/sheer_elegance/booking-references",
       },
       { headers: { "Cache-Control": "no-store" } },
     );

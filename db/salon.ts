@@ -128,6 +128,20 @@ export async function getServices() {
   return rows.map(toService);
 }
 
+async function getService(id: number) {
+  const rows = await queryRows<ServiceRow>(
+    `SELECT id, name, category, price_naira, duration_minutes, image_url,
+      short_description, is_featured
+     FROM services
+     WHERE id = ?
+     LIMIT 1`,
+    [id],
+  );
+  const service = rows[0] ? toService(rows[0]) : null;
+  if (!service) throw new Error("Service was not found after saving.");
+  return service;
+}
+
 export async function getHairstyles() {
   const rows = await queryRows<HairstyleRow>(
     `SELECT id, name, category, image_url, description, tags
@@ -137,42 +151,40 @@ export async function getHairstyles() {
   return rows.map(toHairstyle);
 }
 
-export async function saveHairstyles(hairstyles: Hairstyle[]) {
-  await withDbConnection(async (connection) => {
-    try {
-      await connection.beginTransaction();
-      for (const hairstyle of hairstyles) {
-        const values = [
-          hairstyle.name,
-          hairstyle.category,
-          hairstyle.imageUrl,
-          hairstyle.description,
-          hairstyle.tags.join(","),
-        ];
+async function getHairstyle(id: number) {
+  const rows = await queryRows<HairstyleRow>(
+    `SELECT id, name, category, image_url, description, tags
+     FROM hairstyles
+     WHERE id = ?
+     LIMIT 1`,
+    [id],
+  );
+  const hairstyle = rows[0] ? toHairstyle(rows[0]) : null;
+  if (!hairstyle) throw new Error("Hairstyle was not found after saving.");
+  return hairstyle;
+}
 
-        if (hairstyle.id > 0) {
-          await connection.query(
-            `UPDATE hairstyles
-             SET name = ?, category = ?, image_url = ?,
-               description = ?, tags = ?
-             WHERE id = ?`,
-            [...values, hairstyle.id],
-          );
-        } else {
-          await connection.query(
-            `INSERT INTO hairstyles
-              (name, category, image_url, description, tags)
-             VALUES (?, ?, ?, ?, ?)`,
-            values,
-          );
-        }
-      }
-      await connection.commit();
-    } catch (error) {
-      await connection.rollback();
-      throw error;
-    }
-  });
+export async function createHairstyle(hairstyle: Omit<Hairstyle, "id">) {
+  const [result] = await withDbConnection(async (connection) =>
+    connection.query<ResultSetHeader>(
+      `INSERT INTO hairstyles (name, category, image_url, description, tags)
+       VALUES (?, ?, ?, ?, ?)`,
+      [hairstyle.name, hairstyle.category, hairstyle.imageUrl, hairstyle.description, hairstyle.tags.join(",")],
+    ),
+  );
+  return getHairstyle(result.insertId);
+}
+
+export async function updateHairstyle(hairstyle: Hairstyle) {
+  await withDbConnection(async (connection) =>
+    connection.query(
+      `UPDATE hairstyles
+       SET name = ?, category = ?, image_url = ?, description = ?, tags = ?
+       WHERE id = ?`,
+      [hairstyle.name, hairstyle.category, hairstyle.imageUrl, hairstyle.description, hairstyle.tags.join(","), hairstyle.id],
+    ),
+  );
+  return getHairstyle(hairstyle.id);
 }
 
 export async function deleteHairstyle(id: number) {
@@ -181,47 +193,29 @@ export async function deleteHairstyle(id: number) {
   );
 }
 
-export async function saveServices(services: Service[]) {
-  await withDbConnection(async (connection) => {
-    try {
-      await connection.beginTransaction();
-      for (const service of services) {
-        const values = [
-          service.name,
-          service.name,
-          service.priceNaira,
-          service.durationMinutes,
-          service.imageUrl,
-          service.shortDescription,
-          service.isFeatured ? 1 : 0,
-        ];
+export async function createService(service: Omit<Service, "id">) {
+  const [result] = await withDbConnection(async (connection) =>
+    connection.query<ResultSetHeader>(
+      `INSERT INTO services (
+        name, category, price_naira, duration_minutes, image_url, short_description, is_featured
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [service.name, service.name, service.priceNaira, service.durationMinutes, service.imageUrl, service.shortDescription, service.isFeatured ? 1 : 0],
+    ),
+  );
+  return getService(result.insertId);
+}
 
-        if (service.id > 0) {
-          await connection.query(
-            `UPDATE services
-             SET name = ?, category = ?,
-               price_naira = ?, duration_minutes = ?,
-               image_url = ?, short_description = ?,
-               is_featured = ?
-             WHERE id = ?`,
-            [...values, service.id],
-          );
-        } else {
-          await connection.query(
-            `INSERT INTO services (
-              name, category, price_naira, duration_minutes,
-              image_url, short_description, is_featured
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            values,
-          );
-        }
-      }
-      await connection.commit();
-    } catch (error) {
-      await connection.rollback();
-      throw error;
-    }
-  });
+export async function updateService(service: Service) {
+  await withDbConnection(async (connection) =>
+    connection.query(
+      `UPDATE services
+       SET name = ?, category = ?, price_naira = ?, duration_minutes = ?,
+         image_url = ?, short_description = ?, is_featured = ?
+       WHERE id = ?`,
+      [service.name, service.name, service.priceNaira, service.durationMinutes, service.imageUrl, service.shortDescription, service.isFeatured ? 1 : 0, service.id],
+    ),
+  );
+  return getService(service.id);
 }
 
 export async function deleteService(id: number) {

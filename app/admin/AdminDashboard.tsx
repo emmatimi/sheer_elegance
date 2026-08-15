@@ -100,6 +100,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
   const [savingHairstyles, setSavingHairstyles] = useState(false);
   const [savingHairstyleId, setSavingHairstyleId] = useState<number | null>(null);
   const [savingSettings, setSavingSettings] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [bookingDate, setBookingDate] = useState("");
   const [hairstyleSearch, setHairstyleSearch] = useState("");
   const [hairstyleCategoryFilter, setHairstyleCategoryFilter] = useState("all");
@@ -229,24 +230,21 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
       return;
     }
 
-    const nextServices = [
-      ...services,
-      {
-        id: -Date.now(),
-        name,
-        category: name,
-        priceNaira: 0,
-        durationMinutes: 0,
-        imageUrl,
-        shortDescription,
-        isFeatured: false,
-      },
-    ];
+    const newService: Omit<ServiceRecord, "id"> = {
+      name,
+      category: name,
+      priceNaira: 0,
+      durationMinutes: 0,
+      imageUrl,
+      shortDescription,
+      isFeatured: false,
+    };
 
     setSavingServices(true);
     setStatus("");
     try {
-      await persistServices(nextServices);
+      const savedService = await createServiceRecord(newService);
+      setServices((current) => [...current, savedService]);
       setServiceModalOpen(false);
       setModalImageUrl("");
       formElement.reset();
@@ -298,14 +296,15 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        onReady(reader.result);
-        setStatus("Image ready.");
-      }
-    };
-    reader.readAsDataURL(file);
+    setUploadingImage(true);
+    setStatus("Uploading image...");
+    void uploadAdminImageToImageKit(file)
+      .then((imageUrl) => {
+        onReady(imageUrl);
+        setStatus("Image uploaded. Save the card to publish it.");
+      })
+      .catch((error) => setStatus(error instanceof Error ? error.message : "Unable to upload image."))
+      .finally(() => setUploadingImage(false));
   }
 
   function uploadServiceImage(serviceId: number, file: File | undefined) {
@@ -330,16 +329,26 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
     readImageFile(event.dataTransfer.files[0], setHairstyleModalImageUrl);
   }
 
-  async function persistServices(nextServices: ServiceRecord[]) {
+  async function createServiceRecord(service: Omit<ServiceRecord, "id">) {
+    const response = await fetch("/api/admin/services", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ service }),
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok || !payload?.service) throw new Error(payload?.error ?? "Unable to create service.");
+    return payload.service as ServiceRecord;
+  }
+
+  async function updateServiceRecord(service: ServiceRecord) {
     const response = await fetch("/api/admin/services", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ services: nextServices }),
+      body: JSON.stringify({ service }),
     });
     const payload = await response.json().catch(() => null);
-    if (!response.ok) throw new Error(payload?.error ?? "Unable to save services.");
-    setServices(payload.services ?? nextServices);
-    return payload.services ?? nextServices;
+    if (!response.ok || !payload?.service) throw new Error(payload?.error ?? "Unable to save service.");
+    return payload.service as ServiceRecord;
   }
 
   async function saveService(serviceId: number) {
@@ -348,8 +357,8 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
     setSavingServiceId(serviceId);
     setStatus("");
     try {
-      const nextServices = services.map((service) => service.id === serviceId ? draft : service);
-      await persistServices(nextServices);
+      const savedService = await updateServiceRecord(draft);
+      setServices((current) => current.map((service) => service.id === serviceId ? savedService : service));
       cancelEditingService(serviceId);
       setStatus("Success: service changes saved.");
     } catch (error) {
@@ -372,7 +381,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
       const response = await fetch(`/api/admin/services?id=${serviceId}`, { method: "DELETE" });
       const payload = await response.json().catch(() => null);
       if (!response.ok) throw new Error(payload?.error ?? "Unable to delete service.");
-      setServices(payload.services ?? services.filter((item) => item.id !== serviceId));
+      setServices((current) => current.filter((item) => item.id !== serviceId));
       setPendingDelete(null);
       setStatus(`Success: "${service.name}" deleted.`);
     } catch (error) {
@@ -395,22 +404,13 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
       return;
     }
 
-    const nextHairstyles = [
-      ...hairstyles,
-      {
-        id: -Date.now(),
-        name,
-        category,
-        imageUrl,
-        description,
-        tags,
-      },
-    ];
+    const newHairstyle: Omit<HairstyleRecord, "id"> = { name, category, imageUrl, description, tags };
 
     setSavingHairstyles(true);
     setStatus("");
     try {
-      await persistHairstyles(nextHairstyles);
+      const savedHairstyle = await createHairstyleRecord(newHairstyle);
+      setHairstyles((current) => [...current, savedHairstyle]);
       setHairstyleModalOpen(false);
       setHairstyleModalImageUrl("");
       formElement.reset();
@@ -455,16 +455,26 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
     uploadHairstyleImage(hairstyleId, event.dataTransfer.files[0]);
   }
 
-  async function persistHairstyles(nextHairstyles: HairstyleRecord[]) {
+  async function createHairstyleRecord(hairstyle: Omit<HairstyleRecord, "id">) {
+    const response = await fetch("/api/admin/hairstyles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ hairstyle }),
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok || !payload?.hairstyle) throw new Error(payload?.error ?? "Unable to create hairstyle.");
+    return payload.hairstyle as HairstyleRecord;
+  }
+
+  async function updateHairstyleRecord(hairstyle: HairstyleRecord) {
     const response = await fetch("/api/admin/hairstyles", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ hairstyles: nextHairstyles }),
+      body: JSON.stringify({ hairstyle }),
     });
     const payload = await response.json().catch(() => null);
-    if (!response.ok) throw new Error(payload?.error ?? "Unable to save hairstyles.");
-    setHairstyles(payload.hairstyles ?? nextHairstyles);
-    return payload.hairstyles ?? nextHairstyles;
+    if (!response.ok || !payload?.hairstyle) throw new Error(payload?.error ?? "Unable to save hairstyle.");
+    return payload.hairstyle as HairstyleRecord;
   }
 
   async function saveHairstyle(hairstyleId: number) {
@@ -473,8 +483,8 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
     setSavingHairstyleId(hairstyleId);
     setStatus("");
     try {
-      const nextHairstyles = hairstyles.map((hairstyle) => hairstyle.id === hairstyleId ? draft : hairstyle);
-      await persistHairstyles(nextHairstyles);
+      const savedHairstyle = await updateHairstyleRecord(draft);
+      setHairstyles((current) => current.map((hairstyle) => hairstyle.id === hairstyleId ? savedHairstyle : hairstyle));
       cancelEditingHairstyle(hairstyleId);
       setStatus("Success: hairstyle changes saved.");
     } catch (error) {
@@ -497,7 +507,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
       const response = await fetch(`/api/admin/hairstyles?id=${hairstyleId}`, { method: "DELETE" });
       const payload = await response.json().catch(() => null);
       if (!response.ok) throw new Error(payload?.error ?? "Unable to delete hairstyle.");
-      setHairstyles(payload.hairstyles ?? hairstyles.filter((item) => item.id !== hairstyleId));
+      setHairstyles((current) => current.filter((item) => item.id !== hairstyleId));
       setPendingDelete(null);
       setStatus(`Success: "${hairstyle.name}" deleted.`);
     } catch (error) {
@@ -698,8 +708,8 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
                         </div>
                         {isEditing ? (
                           <div className="admin-card-actions">
-                            <button className="button gold" type="button" onClick={() => saveService(service.id)} disabled={savingServiceId === service.id}>
-                              {savingServiceId === service.id ? "Saving..." : "Save"}
+                            <button className="button gold" type="button" onClick={() => saveService(service.id)} disabled={savingServiceId === service.id || uploadingImage}>
+                              {uploadingImage ? "Uploading..." : savingServiceId === service.id ? "Saving..." : "Save"}
                             </button>
                             <button type="button" onClick={() => cancelEditingService(service.id)}>Cancel</button>
                             {pendingDelete?.type === "service" && pendingDelete.id === service.id ? (<> <button className="danger-confirm" type="button" onClick={() => deleteServiceCard(service.id)}>Confirm delete</button><button type="button" onClick={() => setPendingDelete(null)}>Keep</button></>) : (<button className="danger-icon" type="button" aria-label={`Delete ${service.name}`} onClick={() => deleteServiceCard(service.id)}>Delete</button>)}
@@ -807,8 +817,8 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
                           </div>
                           {isEditing ? (
                             <div className="admin-card-actions">
-                              <button className="button gold" type="button" onClick={() => saveHairstyle(hairstyle.id)} disabled={savingHairstyleId === hairstyle.id}>
-                                {savingHairstyleId === hairstyle.id ? "Saving..." : "Save"}
+                              <button className="button gold" type="button" onClick={() => saveHairstyle(hairstyle.id)} disabled={savingHairstyleId === hairstyle.id || uploadingImage}>
+                                {uploadingImage ? "Uploading..." : savingHairstyleId === hairstyle.id ? "Saving..." : "Save"}
                               </button>
                               <button type="button" onClick={() => cancelEditingHairstyle(hairstyle.id)}>Cancel</button>
                               {pendingDelete?.type === "hairstyle" && pendingDelete.id === hairstyle.id ? (<> <button className="danger-confirm" type="button" onClick={() => deleteHairstyleCard(hairstyle.id)}>Confirm delete</button><button type="button" onClick={() => setPendingDelete(null)}>Keep</button></>) : (<button className="danger-icon" type="button" aria-label={`Delete ${hairstyle.name}`} onClick={() => deleteHairstyleCard(hairstyle.id)}>Delete</button>)}
@@ -903,7 +913,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
             </div>
             <div className="admin-modal-actions">
               <button type="button" onClick={() => setServiceModalOpen(false)}>Cancel</button>
-              <button className="button gold" type="submit" disabled={savingServices}>{savingServices ? "Saving..." : "Save category"}</button>
+              <button className="button gold" type="submit" disabled={savingServices || uploadingImage}>{uploadingImage ? "Uploading..." : savingServices ? "Saving..." : "Save category"}</button>
             </div>
           </form>
         </div>
@@ -940,7 +950,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
             </div>
             <div className="admin-modal-actions">
               <button type="button" onClick={() => setHairstyleModalOpen(false)}>Cancel</button>
-              <button className="button gold" type="submit" disabled={savingHairstyles}>{savingHairstyles ? "Saving..." : "Save option"}</button>
+              <button className="button gold" type="submit" disabled={savingHairstyles || uploadingImage}>{uploadingImage ? "Uploading..." : savingHairstyles ? "Saving..." : "Save option"}</button>
             </div>
           </form>
         </div>
@@ -975,4 +985,43 @@ function formatDuration(totalMinutes: number) {
   if (hours && minutes) return `${hours} hr ${minutes} min`;
   if (hours) return `${hours} hr`;
   return `${minutes} min`;
+}
+
+async function uploadAdminImageToImageKit(file: File) {
+  const authResponse = await fetch("/api/uploads/reference?scope=admin", { cache: "no-store" });
+  const auth = await authResponse.json().catch(() => null) as ImageKitAuthPayload | null;
+  if (!authResponse.ok || !auth?.publicKey || !auth.signature || !auth.token || !auth.expire) {
+    throw new Error(auth?.error ?? "Unable to prepare image upload.");
+  }
+
+  const formData = new FormData();
+  formData.set("file", file);
+  formData.set("fileName", cleanImageFileName(file.name));
+  formData.set("publicKey", auth.publicKey);
+  formData.set("signature", auth.signature);
+  formData.set("expire", String(auth.expire));
+  formData.set("token", auth.token);
+  formData.set("folder", auth.folder || "/sheer_elegance/booking-references/admin-assets");
+  formData.set("useUniqueFileName", "true");
+
+  const uploadResponse = await fetch("https://upload.imagekit.io/api/v1/files/upload", { method: "POST", body: formData });
+  const upload = await uploadResponse.json().catch(() => null) as { url?: string; message?: string } | null;
+  if (!uploadResponse.ok || !upload?.url) {
+    throw new Error(upload?.message ?? "Unable to upload image.");
+  }
+  return upload.url;
+}
+
+type ImageKitAuthPayload = {
+  publicKey?: string;
+  signature?: string;
+  token?: string;
+  expire?: number;
+  folder?: string;
+  error?: string;
+};
+
+function cleanImageFileName(value: string) {
+  const safeName = value.trim().replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
+  return safeName || `salon-image-${Date.now()}.jpg`;
 }
