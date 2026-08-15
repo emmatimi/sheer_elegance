@@ -1,6 +1,7 @@
 "use client";
 
 import { CSSProperties, FormEvent, MouseEvent, useEffect, useMemo, useState } from "react";
+import { FaWhatsapp, FaInstagram, FaTiktok } from "react-icons/fa6";
 
 const services = [
   { id: 1, name: "Silk press and trim", category: "Natural hair", price: "NGN 30,000", priceNaira: 30000, duration: "2 hrs", durationMinutes: 120, image: "https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?auto=format&fit=crop&w=900&q=85", shortDescription: "silk press, blow-dry and straightening, curls, waves and sleek styling" },
@@ -580,7 +581,7 @@ export default function Home() {
         </div>
       </section>
 
-      <footer><div className="footer-logo"><img src="/sheer-elegance-logo.png" alt="Oreoluwa Sheer Elegance" /></div><p>Hair, handled beautifully.</p><div className="footer-links"><a href="#services">Services</a><a href="#gallery">Our work</a><a href="#contact">Instagram</a><a href="#contact">WhatsApp</a></div><div className="footer-bottom"><span>© 2026 Sheer Elegance</span><span>Privacy - Booking policy</span></div></footer>
+      <footer><div className="footer-logo"><img src="/sheer-elegance-logo.png" alt="Oreoluwa Sheer Elegance" /></div><p>Hair, handled beautifully.</p><div className="footer-links"><a href="#services">Services</a><a href="#gallery">Our work</a></div><div className="footer-social"><a href="https://wa.me/2348000000000" className="social-whatsapp" target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp"><FaWhatsapp size={22} /></a><a href="https://instagram.com/sheerelegance" className="social-instagram" target="_blank" rel="noopener noreferrer" aria-label="Follow on Instagram"><FaInstagram size={22} /></a><a href="https://tiktok.com/@sheerelegance" className="social-tiktok" target="_blank" rel="noopener noreferrer" aria-label="Follow on TikTok"><FaTiktok size={22} /></a></div><div className="footer-bottom"><span>© 2026 Sheer Elegance</span><span>Privacy - Booking policy</span></div></footer>
 
       {bookingOpen && <div className="booking-overlay" role="dialog" aria-modal="true" aria-labelledby="booking-title">
         <button className="booking-backdrop" aria-label="Close booking" onClick={() => setBookingOpen(false)} />

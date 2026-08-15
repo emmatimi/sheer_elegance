@@ -347,7 +347,15 @@ h2 em,
 footer { background:#030303; color:white; text-align:center; padding:65px 6vw 22px; }
 .footer-logo { width:260px; height:95px; overflow:hidden; margin:0 auto 10px; display:flex; align-items:center; }
 footer>p { color:#75716b; font-family:var(--font-display); font-size:20px; }
-.footer-links { display:flex; justify-content:center; gap:35px; margin:35px 0 60px; text-transform:uppercase; letter-spacing:.15em; font-size:9px; }
+.footer-links { display:flex; justify-content:center; gap:35px; margin:35px 0 28px; text-transform:uppercase; letter-spacing:.15em; font-size:9px; }
+.footer-social { display:flex; justify-content:center; gap:28px; margin:0 0 52px; }
+.footer-social a { display:grid; place-items:center; width:46px; height:46px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.04); color:rgba(255,255,255,.45); transition:color .28s ease,background .28s ease,border-color .28s ease,transform .28s ease; }
+.footer-social a.social-whatsapp { color:#25D366; border-color:rgba(37,211,102,.25); }
+.footer-social a.social-whatsapp:hover { background:rgba(37,211,102,.12); border-color:rgba(37,211,102,.55); transform:translateY(-3px); }
+.footer-social a.social-instagram { color:#E1306C; border-color:rgba(225,48,108,.25); }
+.footer-social a.social-instagram:hover { background:rgba(225,48,108,.12); border-color:rgba(225,48,108,.55); transform:translateY(-3px); }
+.footer-social a.social-tiktok { color:#69C9D0; border-color:rgba(105,201,208,.25); }
+.footer-social a.social-tiktok:hover { background:rgba(105,201,208,.12); border-color:rgba(105,201,208,.55); transform:translateY(-3px); }
 .footer-bottom { border-top:1px solid #24211e; padding-top:22px; display:flex; justify-content:space-between; color:#66615b; font-size:9px; text-transform:uppercase; letter-spacing:.12em; }
 .booking-overlay { position:fixed; z-index:100; inset:0; display:flex; justify-content:flex-end; }
 .booking-backdrop { position:absolute; inset:0; background:rgba(0,0,0,.72); border:0; width:100%; }
