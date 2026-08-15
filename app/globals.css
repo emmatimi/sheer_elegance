@@ -712,6 +712,9 @@ footer>p { color:#75716b; font-family:var(--font-display); font-size:20px; }
   .section-heading h2,.gallery-title h2 { font-size:52px; }
   .service-grid { grid-template-columns:1fr; gap:40px; }
   .service-card:nth-child(even) { transform:none; }
+  .service-info { grid-template-columns:1fr; gap:20px; padding-bottom:28px; }
+  .service-info > div:last-child { text-align:left; justify-self:start; }
+  .service-style-list { grid-template-columns:repeat(2,1fr); gap:12px 16px; }
   .about-us { grid-template-columns:1fr; padding:85px 22px; gap:26px; }
   .about-us:before { font-size:82px; top:32px; right:12px; }
   .about-story { padding-top:30px; }
