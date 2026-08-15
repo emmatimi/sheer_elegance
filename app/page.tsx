@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { CSSProperties, FormEvent, MouseEvent, useEffect, useMemo, useState } from "react";
 
@@ -491,7 +491,7 @@ export default function Home() {
         </div>
         <div className="service-grid">
           {availableServices.map((item, index) => (
-            <article className="service-card" key={item.name} data-animate>
+            <article className="service-card" key={item.name}>
               <div className="service-image"><img src={item.image} alt={`${item.name} hairstyle`} loading="lazy" /><span>0{index + 1}</span></div>
               <div className="service-info">
                 <div>
@@ -548,9 +548,9 @@ export default function Home() {
       <section className="gallery" id="gallery" data-animate>
         <div className="gallery-title"><p className="eyebrow dark">Fresh from the chair</p><h2>Made to be<br /><em className="script-word">remembered.</em></h2></div>
         <div className="gallery-grid">
-          <figure className="gallery-main" data-animate><img src="https://ik.imagekit.io/4lndq5ke52/sheer_elegance/confirm6.png?updatedAt=1786317818552/c_crop,x_0,y_684,w_2800,h_1867/c_fill,w_1200,h_800,g_auto,q_90,fl_lossy,f_jpg/org/34g2cg7qikmavaytp.jpg" alt="Natural afro hairstyle" loading="lazy" /><figcaption><span>Natural texture</span><strong>The Halo</strong></figcaption></figure>
-          <figure data-animate><img src="https://ik.imagekit.io/4lndq5ke52/sheer_elegance/confirm1.png?" alt="Editorial natural hairstyle" loading="lazy" /><figcaption><span>Editorial</span><strong>Soft Sculpture</strong></figcaption></figure>
-          <figure data-animate><img src="https://ik.imagekit.io/4lndq5ke52/sheer_elegance/hairstyle_07.png?v=96118312172429472841647824823" alt="Natural hair beauty portrait" loading="lazy" /><figcaption><span>Silk finish</span><strong>Golden Hour</strong></figcaption></figure>
+          <figure className="gallery-main"><img src="https://ik.imagekit.io/4lndq5ke52/sheer_elegance/confirm6.png?updatedAt=1786317818552/c_crop,x_0,y_684,w_2800,h_1867/c_fill,w_1200,h_800,g_auto,q_90,fl_lossy,f_jpg/org/34g2cg7qikmavaytp.jpg" alt="Natural afro hairstyle" loading="lazy" /><figcaption><span>Natural texture</span><strong>The Halo</strong></figcaption></figure>
+          <figure><img src="https://ik.imagekit.io/4lndq5ke52/sheer_elegance/confirm1.png?" alt="Editorial natural hairstyle" loading="lazy" /><figcaption><span>Editorial</span><strong>Soft Sculpture</strong></figcaption></figure>
+          <figure><img src="https://ik.imagekit.io/4lndq5ke52/sheer_elegance/hairstyle_07.png?v=96118312172429472841647824823" alt="Natural hair beauty portrait" loading="lazy" /><figcaption><span>Silk finish</span><strong>Golden Hour</strong></figcaption></figure>
         </div>
       </section>
 
