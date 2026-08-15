@@ -7,25 +7,21 @@ type AdminSection = "bookings" | "services" | "service-guide" | "hairstyles" | "
 type ServiceRecord = {
   id: number;
   name: string;
-  slug: string;
   category: string;
   priceNaira: number;
   durationMinutes: number;
   imageUrl: string;
   shortDescription: string;
   isFeatured: boolean;
-  sortOrder: number;
 };
 
 type HairstyleRecord = {
   id: number;
   name: string;
-  slug: string;
   category: string;
   imageUrl: string;
   description: string;
   tags: string[];
-  sortOrder: number;
 };
 
 type SalonSettings = {
@@ -225,12 +221,11 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
     const formElement = event.currentTarget;
     const form = new FormData(formElement);
     const name = String(form.get("name") ?? "").trim();
-    const slug = String(form.get("slug") ?? "").trim() || slugify(name);
     const shortDescription = String(form.get("shortDescription") ?? "").trim();
     const imageUrl = modalImageUrl;
 
     if (!name || !shortDescription || !imageUrl) {
-      setStatus("Service name, image and hairstyle list are required.");
+      setStatus("Service category name, image and description are required.");
       return;
     }
 
@@ -239,14 +234,12 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
       {
         id: -Date.now(),
         name,
-        slug,
         category: name,
         priceNaira: 0,
         durationMinutes: 0,
         imageUrl,
         shortDescription,
         isFeatured: false,
-        sortOrder: services.length + 1,
       },
     ];
 
@@ -393,7 +386,6 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
     const form = new FormData(formElement);
     const name = String(form.get("name") ?? "").trim();
     const category = String(form.get("category") ?? services[0]?.name ?? "").trim();
-    const slug = String(form.get("slug") ?? "").trim() || slugify(name);
     const description = String(form.get("description") ?? "").trim();
     const tags = String(form.get("tags") ?? "").split(",").map((tag) => tag.trim()).filter(Boolean);
     const imageUrl = hairstyleModalImageUrl;
@@ -408,12 +400,10 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
       {
         id: -Date.now(),
         name,
-        slug,
         category,
         imageUrl,
         description,
         tags,
-        sortOrder: hairstyles.length + 1,
       },
     ];
 
@@ -540,10 +530,12 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
     bookings: "Bookings",
     services: "Services",
     "service-guide": "Service guide",
-    hairstyles: "Hairstyles",
+    hairstyles: "Hair styles & service options",
     settings: "Salon details",
   })[activeSection], [activeSection]);
-  const hairstyleCategories = useMemo(() => Array.from(new Set(hairstyles.map((item) => item.category).filter(Boolean))), [hairstyles]);
+  const serviceCategories = useMemo(() => Array.from(new Set(services.map((item) => item.name).filter(Boolean))), [services]);
+  const categoryOptions = useMemo(() => Array.from(new Set([...serviceCategories, ...serviceGuide.map(([category]) => category)])), [serviceCategories]);
+  const hairstyleCategories = useMemo(() => Array.from(new Set([...categoryOptions, ...hairstyles.map((item) => item.category).filter(Boolean)])), [hairstyles, categoryOptions]);
   const filteredHairstyles = useMemo(() => {
     const query = hairstyleSearch.trim().toLowerCase();
     return hairstyles.filter((item) => {
@@ -594,13 +586,16 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
           <a className={activeSection === "bookings" ? "active" : ""} href="/admin/bookings" onClick={(event) => openSection(event, "bookings")}>Bookings</a>
           <a className={activeSection === "services" ? "active" : ""} href="/admin/services" onClick={(event) => openSection(event, "services")}>Services</a>
           <a className={activeSection === "service-guide" ? "active" : ""} href="/admin/service-guide" onClick={(event) => openSection(event, "service-guide")}>Service guide</a>
-          <a className={activeSection === "hairstyles" ? "active" : ""} href="/admin/hairstyles" onClick={(event) => openSection(event, "hairstyles")}>Hairstyles</a>
+          <a className={activeSection === "hairstyles" ? "active" : ""} href="/admin/hairstyles" onClick={(event) => openSection(event, "hairstyles")}>Hair styles & service options</a>
           <a className={activeSection === "settings" ? "active" : ""} href="/admin/settings" onClick={(event) => openSection(event, "settings")}>Salon details</a>
         </nav>
         <button onClick={signOut}>Sign out</button>
       </aside>
 
       <section className="admin-content">
+        <datalist id="service-category-options">
+          {categoryOptions.map((category) => <option key={category} value={category} />)}
+        </datalist>
         <div className="admin-top">
           <div><p className="eyebrow dark">Content management</p><h1>{title}</h1></div>
           <div className="admin-actions"><span>{status}</span></div>
@@ -658,12 +653,12 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
           <section className="admin-panel">
             <div className="admin-panel-heading">
               <div>
-                <h2>Salon services</h2>
-                <p>Edit service names, hairstyle lists and images. Use the guide if you need the recommended service structure.</p>
+                <h2>Service categories</h2>
+                <p>These parent categories appear on the homepage. Add specific bookable styles and services from Styles & service options.</p>
               </div>
               <div className="admin-button-group">
                 <a className="button ghost" href="/admin/service-guide" onClick={(event) => openSection(event, "service-guide")}>Open guide</a>
-                <button className="button ghost" type="button" onClick={() => setServiceModalOpen(true)}>Add service</button>
+                <button className="button ghost" type="button" onClick={() => setServiceModalOpen(true)}>Add category</button>
               </div>
             </div>
             <div className="admin-service-list">
@@ -698,7 +693,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
                     <div className="admin-service-fields">
                       <div className="admin-service-card-head wide">
                         <div>
-                            <p>Service #{index + 1} · {service.slug}</p>
+                            <p>Service category #{index + 1}</p>
                           <h3>{service.name}</h3>
                         </div>
                         {isEditing ? (
@@ -718,9 +713,8 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
                       </div>
                       {isEditing ? (
                         <>
-                          <label className="wide">Service name<input value={editableService.name} onChange={(event) => updateServiceDraft(service.id, "name", event.target.value)} /></label>
-                          <label>Slug<input value={editableService.slug} onChange={(event) => updateServiceDraft(service.id, "slug", event.target.value)} /></label>
-                          <label className="wide">Hairstyles under this service<textarea value={editableService.shortDescription} onChange={(event) => updateServiceDraft(service.id, "shortDescription", event.target.value)} /></label>
+                          <label className="wide">Service category name<input value={editableService.name} onChange={(event) => { updateServiceDraft(service.id, "name", event.target.value); updateServiceDraft(service.id, "category", event.target.value); }} /></label>
+                          <label className="wide">Styles or services under this category<textarea value={editableService.shortDescription} onChange={(event) => updateServiceDraft(service.id, "shortDescription", event.target.value)} /></label>
                         </>
                       ) : (
                         <div className="admin-service-readonly wide">
@@ -767,12 +761,9 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
         {activeSection === "hairstyles" && (
           <section className="admin-panel">
             <div className="admin-panel-heading">
-              <div>
-                <h2>Hairstyle library</h2>
-                <p>Manage the hairstyle inspiration customers can browse and book from.</p>
-              </div>
+              <p>Add the specific hairstyles or bookable services customers can choose under each parent category.</p>
               <div className="admin-button-group">
-                <button className="button ghost" type="button" onClick={() => setHairstyleModalOpen(true)}>Add hairstyle</button>
+                <button className="button ghost" type="button" onClick={() => setHairstyleModalOpen(true)}>Add option</button>
               </div>
             </div>
             <div className="admin-filter-bar admin-hairstyle-filter">
@@ -832,7 +823,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
                         {isEditing ? (
                           <>
                             <label className="wide">Hairstyle name<input value={editableHairstyle.name} onChange={(event) => updateHairstyleDraft(hairstyle.id, "name", event.target.value)} /></label>
-                            <label>Service category<select value={editableHairstyle.category} onChange={(event) => updateHairstyleDraft(hairstyle.id, "category", event.target.value)}>{services.map((service) => <option key={service.id} value={service.name}>{service.name}</option>)}</select></label>
+                            <label>Service category<select value={editableHairstyle.category} onChange={(event) => updateHairstyleDraft(hairstyle.id, "category", event.target.value)}>{categoryOptions.map((category) => <option key={category} value={category}>{category}</option>)}</select></label>
                             <label className="wide">Tags<input value={editableHairstyle.tags.join(", ")} onChange={(event) => updateHairstyleDraft(hairstyle.id, "tags", event.target.value.split(",").map((tag) => tag.trim()).filter(Boolean))} /></label>
                             <label className="wide">Description<textarea value={editableHairstyle.description} onChange={(event) => updateHairstyleDraft(hairstyle.id, "description", event.target.value)} /></label>
                           </>
@@ -891,11 +882,10 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
                 <p className="eyebrow dark">New service</p>
                 <h2 id="add-service-title">Add salon service</h2>
               </div>
-              <button type="button" onClick={() => setServiceModalOpen(false)}>Close</button>
+              <button type="button" onClick={() => setServiceModalOpen(false)}>X</button>
             </div>
             <div className="admin-modal-grid">
-              <label className="wide">Service name<input name="name" required placeholder="Silk press and trim" /></label>
-              <label>Slug<input name="slug" placeholder="silk-press-and-trim" /></label>
+              <label className="wide">Service category name<input name="name" required placeholder="Braiding" /></label>
               <label
                 className="admin-image-drop wide"
                 onDragOver={(event) => {
@@ -906,14 +896,14 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
                 onDrop={dropModalImage}
               >
                 {modalImageUrl ? <img src={modalImageUrl} alt="" /> : <div className="admin-image-empty">No image selected</div>}
-                <span>Drop service image here or click to upload</span>
+                <span>Drop category image here or click to upload</span>
                 <input type="file" accept="image/*" onChange={(event) => readImageFile(event.target.files?.[0], setModalImageUrl)} />
               </label>
-              <label className="wide">Hairstyles under this service<textarea name="shortDescription" required placeholder="knotless braids, box braids, cornrows..." /></label>
+              <label className="wide">Styles or services under this category<textarea name="shortDescription" required placeholder="knotless braids, box braids, cornrows..." /></label>
             </div>
             <div className="admin-modal-actions">
               <button type="button" onClick={() => setServiceModalOpen(false)}>Cancel</button>
-              <button className="button gold" type="submit" disabled={savingServices}>{savingServices ? "Saving..." : "Save service"}</button>
+              <button className="button gold" type="submit" disabled={savingServices}>{savingServices ? "Saving..." : "Save category"}</button>
             </div>
           </form>
         </div>
@@ -924,14 +914,14 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
           <form className="admin-modal-card" onSubmit={addHairstyleFromModal}>
             <div className="admin-modal-heading">
               <div>
-                <p className="eyebrow dark">New hairstyle</p>
-                <h2 id="add-hairstyle-title">Add hairstyle</h2>
+                <p className="eyebrow dark">New option</p>
+                <h2 id="add-hairstyle-title">Add style or service option</h2>
               </div>
-              <button type="button" onClick={() => setHairstyleModalOpen(false)}>Close</button>
+              <button type="button" onClick={() => setHairstyleModalOpen(false)}>X</button>
             </div>
             <div className="admin-modal-grid">
-              <label className="wide">Hairstyle name<input name="name" required placeholder="Soft stitch cornrows" /></label>
-              <label>Service category<select name="category" required defaultValue=""> <option value="" disabled>Select service</option>{services.map((service) => <option key={service.id} value={service.name}>{service.name}</option>)}</select></label>
+              <label className="wide">Option name<input name="name" required placeholder="Soft stitch cornrows" /></label>
+              <label>Service category<select name="category" required defaultValue=""> <option value="" disabled>Select service category</option>{categoryOptions.map((category) => <option key={category} value={category}>{category}</option>)}</select></label>
               <label className="wide">Tags<input name="tags" placeholder="cornrows, stitch, protective" /></label>
               <label
                 className="admin-image-drop wide"
@@ -943,14 +933,14 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
                 onDrop={dropHairstyleModalImage}
               >
                 {hairstyleModalImageUrl ? <img src={hairstyleModalImageUrl} alt="" /> : <div className="admin-image-empty">No image selected</div>}
-                <span>Drop hairstyle image here or click to upload</span>
+                <span>Drop option image here or click to upload</span>
                 <input type="file" accept="image/*" onChange={(event) => readImageFile(event.target.files?.[0], setHairstyleModalImageUrl)} />
               </label>
-              <label className="wide">Description<textarea name="description" required placeholder="Describe the hairstyle inspiration customers will see." /></label>
+              <label className="wide">Description<textarea name="description" required placeholder="Describe what customers will see and book." /></label>
             </div>
             <div className="admin-modal-actions">
               <button type="button" onClick={() => setHairstyleModalOpen(false)}>Cancel</button>
-              <button className="button gold" type="submit" disabled={savingHairstyles}>{savingHairstyles ? "Saving..." : "Save hairstyle"}</button>
+              <button className="button gold" type="submit" disabled={savingHairstyles}>{savingHairstyles ? "Saving..." : "Save option"}</button>
             </div>
           </form>
         </div>
@@ -969,7 +959,7 @@ export function AdminDashboard({ section }: { section: AdminSection }) {
 }
 
 function numericServiceField(field: keyof ServiceRecord) {
-  return field === "priceNaira" || field === "durationMinutes" || field === "sortOrder";
+  return field === "priceNaira" || field === "durationMinutes";
 }
 
 function toListItems(value: string) {
@@ -986,13 +976,3 @@ function formatDuration(totalMinutes: number) {
   if (hours) return `${hours} hr`;
   return `${minutes} min`;
 }
-
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-}
-
-

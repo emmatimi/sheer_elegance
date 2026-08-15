@@ -5,7 +5,6 @@ import { CSSProperties, useEffect, useMemo, useState } from "react";
 type Hairstyle = {
   id: number;
   name: string;
-  slug: string;
   category: string;
   imageUrl: string;
   description: string;
@@ -106,7 +105,7 @@ export default function HairstylesPage() {
               <h2>{item.name}</h2>
               <p>{item.description}</p>
               <div className="hairstyle-tags">{item.tags.map((tag) => <small key={tag}>{tag}</small>)}</div>
-              <a className="hairstyle-book-link" href={`/book?hairstyle=${encodeURIComponent(item.slug)}`}>
+              <a className="hairstyle-book-link" href={`/book?option=${item.id}`}>
                 <span>Book this look</span>
               </a>
             </div>

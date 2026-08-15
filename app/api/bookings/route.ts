@@ -88,6 +88,9 @@ function parseBooking(payload: unknown) {
   if (!Number.isInteger(serviceId) || serviceId < 1) {
     throw new Error("serviceId must be a valid service id");
   }
+  if (!hairstyle?.name) {
+    throw new Error("Please choose or enter the style/service you want to book");
+  }
 
   return {
     serviceId,
@@ -116,15 +119,8 @@ function parseHairstyle(value: unknown) {
   const category = optionalString(item.category);
   const imageUrl = optionalString(item.imageUrl);
   const description = optionalString(item.description);
-  if (!name || !imageUrl) return null;
+  if (!name) return null;
   return { name, category, imageUrl, description };
-}
-
-function paymentAmountFor(option: PaymentOption, priceNaira: number) {
-  if (option === "deposit") return 10000;
-  if (option === "half") return Math.ceil(priceNaira / 2);
-  if (option === "full") return priceNaira;
-  return 0;
 }
 
 function parsePaymentOption(value: unknown): PaymentOption {

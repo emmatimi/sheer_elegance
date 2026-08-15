@@ -26,12 +26,12 @@ type ApiService = {
 type Hairstyle = {
   id: number;
   name: string;
-  slug: string;
   category: string;
   imageUrl: string;
   description: string;
   tags: string[];
 };
+type ManualReference = { imageUrl: string; fileName: string } | null;
 
 const times = ["9:00 AM", "10:30 AM", "12:00 PM", "2:30 PM", "4:00 PM", "5:30 PM"];
 const todayIso = new Date().toISOString().slice(0, 10);
@@ -77,8 +77,12 @@ export default function Home() {
   const [service, setService] = useState(services[0].name);
   const [date, setDate] = useState(todayIso);
   const [time, setTime] = useState(times[1]);
-  const [paymentOption, setPaymentOption] = useState<"deposit" | "half" | "full" | "pay_on_arrival">("deposit");
+  const [paymentOption] = useState<"deposit" | "half" | "full" | "pay_on_arrival">("pay_on_arrival");
   const [details, setDetails] = useState({ name: "", phone: "", email: "", notes: "" });
+  const [manualOptionName, setManualOptionName] = useState("");
+  const [manualReference, setManualReference] = useState<ManualReference>(null);
+  const [referenceError, setReferenceError] = useState("");
+  const [referenceUploading, setReferenceUploading] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [bookingError, setBookingError] = useState("");
   const [bookedTimes, setBookedTimes] = useState<Record<string, string[]>>({});
@@ -117,9 +121,9 @@ export default function Home() {
         if (!active) return;
         const nextHairstyles = payload.hairstyles ?? [];
         setHairstyles(nextHairstyles);
-        const slug = new URLSearchParams(window.location.search).get("hairstyle");
-        const matched = nextHairstyles.find((item) => item.slug === slug);
-        if (matched) openBooking(undefined, matched, nextHairstyles);
+        const optionId = Number(new URLSearchParams(window.location.search).get("option") ?? new URLSearchParams(window.location.search).get("hairstyle"));
+        const matched = Number.isInteger(optionId) ? nextHairstyles.find((item) => item.id === optionId) : null;
+        if (matched) openBooking(undefined, matched);
       })
       .catch(() => undefined);
     return () => { active = false; };
@@ -204,9 +208,11 @@ export default function Home() {
   }, []);
 
   const selectedService = useMemo(() => availableServices.find((item) => item.name === service) ?? availableServices[0], [availableServices, service]);
+  const optionName = selectedHairstyle?.name ?? manualOptionName.trim();
+  const optionDescription = selectedHairstyle?.description ?? "";
+  const optionReferenceImage = selectedHairstyle?.imageUrl ?? manualReference?.imageUrl ?? null;
   const availableTimes = times.filter((item) => !bookedTimes[date]?.includes(item));
   const calendarDays = useMemo(() => createCalendarDays(bookedTimes), [bookedTimes]);
-  const paymentAmount = paymentAmountFor(paymentOption, selectedService.priceNaira);
   const activeTestimonial = testimonials[testimonialIndex];
   const activeHero = heroSlides[heroSlide];
 
@@ -240,12 +246,24 @@ export default function Home() {
   function openBooking(initialService?: string, hairstyle?: Hairstyle) {
     if (hairstyle) {
       setSelectedHairstyle(hairstyle);
+      setManualOptionName(hairstyle.name);
+      setManualReference(null);
+      setReferenceError("");
+      setReferenceUploading(false);
       const matchedService = bestServiceForHairstyle(hairstyle, availableServices);
-      if (matchedService) setService(matchedService.name);
-      setStep(2);
+      if (matchedService) {
+        setService(matchedService.name);
+      }
+      setStep(1);
     } else {
-      if (initialService) setService(initialService);
+      if (initialService) {
+        setService(initialService);
+      }
       setSelectedHairstyle(null);
+      setManualOptionName("");
+      setManualReference(null);
+      setReferenceError("");
+      setReferenceUploading(false);
       setStep(1);
     }
     setConfirmed(false);
@@ -255,6 +273,11 @@ export default function Home() {
   async function submitBooking(event: FormEvent) {
     event.preventDefault();
     if (!details.name || !details.phone || !details.email) return;
+    if (!optionName) {
+      setStep(1);
+      setBookingError("Please enter the style or service you want to book.");
+      return;
+    }
     const latestBookedTimes = await loadAvailability();
     setBookedTimes(latestBookedTimes);
     if (latestBookedTimes[date]?.includes(time)) {
@@ -287,12 +310,12 @@ export default function Home() {
         appointmentTime: time,
         paymentOption,
         notes: details.notes,
-        hairstyle: selectedHairstyle ? {
-          name: selectedHairstyle.name,
-          category: selectedHairstyle.category,
-          imageUrl: selectedHairstyle.imageUrl,
-          description: selectedHairstyle.description,
-        } : null,
+        hairstyle: {
+          name: optionName,
+          category: selectedService.name,
+          imageUrl: optionReferenceImage,
+          description: optionDescription,
+        },
       }),
     });
     if (!response.ok) {
@@ -314,6 +337,49 @@ export default function Home() {
       return;
     }
     setConfirmed(true);
+  }
+
+  function chooseCategory(category: string) {
+    setService(category);
+    if (selectedHairstyle?.category !== category) {
+      setSelectedHairstyle(null);
+      setManualOptionName("");
+      setManualReference(null);
+      setReferenceError("");
+      setReferenceUploading(false);
+    }
+  }
+
+  function switchToManualInput() {
+    if (selectedHairstyle) {
+      setManualOptionName(selectedHairstyle.name);
+    }
+    setSelectedHairstyle(null);
+    setManualReference(null);
+    setReferenceError("");
+    setReferenceUploading(false);
+  }
+
+  async function handleReferenceFile(file: File | null) {
+    if (!file) return;
+    setReferenceError("");
+    if (!file.type.startsWith("image/")) {
+      setReferenceError("Please upload an image file.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setReferenceError("Please use an image smaller than 5 MB.");
+      return;
+    }
+    setReferenceUploading(true);
+    try {
+      const imageUrl = await uploadReferenceImageToImageKit(file);
+      setManualReference({ imageUrl, fileName: file.name });
+    } catch (error) {
+      setReferenceError(error instanceof Error ? error.message : "We could not upload that image. Please check your connection and try again.");
+    } finally {
+      setReferenceUploading(false);
+    }
   }
 
   function mapApiService(item: ApiService): Service {
@@ -399,7 +465,7 @@ export default function Home() {
           <p className="eyebrow dark">Find your look</p>
           <h2>Browse styles before you book.</h2>
           <p>Explore braids, silk press looks, bridal styling and protective inspiration. Pick a hairstyle, book from the gallery, and we’ll attach your chosen reference to your appointment.</p>
-          <a className="button gold" href="/hairstyles">Explore hairstyles <span aria-hidden="true">&rarr;</span></a>
+          <a className="button gold" href="/hairstyles">Explore hairstyles/Service options <span aria-hidden="true">&rarr;</span></a>
         </div>
         <div className="hairstyle-promo-strip">
           {(hairstyles.length ? hairstyles.slice(0, 3) : availableServices.slice(0, 3).map((item) => ({ id: item.id, name: item.name, imageUrl: item.image, category: item.category }))).map((item) => (
@@ -434,7 +500,7 @@ export default function Home() {
                     {toServiceItems(item.shortDescription).map((style) => <li key={style}>{style}</li>)}
                   </ul>
                 </div>
-                <div><a aria-label={`Book ${item.name}`} href={`/book?service=${encodeURIComponent(item.name)}`}>Book</a></div>
+                <div><a aria-label={`Book ${item.name}`} href={`/book?category=${encodeURIComponent(item.name)}`}>Book</a></div>
               </div>
             </article>
           ))}
@@ -521,14 +587,30 @@ export default function Home() {
         <div className="booking-panel">
           <div className="booking-top"><div><p>Sheer Elegance</p><h2 id="booking-title">Book your appointment</h2></div><button onClick={() => setBookingOpen(false)} aria-label="Close booking">x</button></div>
           {!confirmed ? <>
-            <div className="stepper">{(selectedHairstyle ? [2,3,4] : [1,2,3,4]).map((n, index) => <span key={n} className={step >= n ? "active" : ""}>{index + 1}</span>)}</div>
-            {step === 1 && <div className="booking-step"><p className="step-label">01 - Choose your service</p><div className="option-list">{availableServices.map((item) => <button key={item.name} className={service === item.name ? "selected" : ""} onClick={() => setService(item.name)}><span><b>{item.name}</b><small>{item.shortDescription}</small></span></button>)}</div></div>}
-            {step === 2 && <div className="booking-step"><p className="step-label">{selectedHairstyle ? "01" : "02"} - Select a date and time</p>{selectedHairstyle && <div className="selected-look-summary"><img src={selectedHairstyle.imageUrl} alt="" /><div><span>Selected look</span><strong>{selectedHairstyle.name}</strong><p>{selectedHairstyle.category}</p></div></div>}<div className="calendar-grid">{calendarDays.map((day) => <button key={day.iso} disabled={day.disabled} className={date === day.iso ? "selected" : ""} onClick={() => chooseDate(day)}><span>{day.weekday}</span><strong>{day.day}</strong></button>)}</div><div className="time-grid">{times.map((item) => <button key={item} disabled={bookedTimes[date]?.includes(item)} className={time === item ? "selected" : ""} onClick={() => { setBookingError(""); setTime(item); }}>{item}</button>)}</div>{availableTimes.length === 0 && <p className="admin-error">This day is fully booked. Please choose another date.</p>}{bookingError && <p className="admin-error">{bookingError}</p>}</div>}
-            {step === 3 && <form className="booking-step details-form" id="details-form" onSubmit={(e) => { e.preventDefault(); setStep(4); }}><p className="step-label">03 - Your details</p><label>Full name<input required value={details.name} onChange={(e) => setDetails({...details, name:e.target.value})} placeholder="Ada Okafor" /></label><label>Phone number<input required type="tel" value={details.phone} onChange={(e) => setDetails({...details, phone:e.target.value})} placeholder="+234 800 000 0000" /></label><label>Email address<input required type="email" value={details.email} onChange={(e) => setDetails({...details, email:e.target.value})} placeholder="you@example.com" /></label><label className="wide">Optional note<textarea value={details.notes} onChange={(e) => setDetails({...details, notes:e.target.value})} placeholder="Tell us anything useful before your visit." /></label></form>}
+            <div className="stepper">{[1,2,3,4].map((n) => <span key={n} className={step >= n ? "active" : ""}>{n}</span>)}</div>
+            {step === 1 && <div className="booking-step manual-booking-step">
+              <p className="step-label">01 - Tell us what you want</p>
+              <div className="gallery-shortcut"><span>Want to pick from our saved looks?</span><a href="/hairstyles">Open hairstyle gallery</a></div>
+              {selectedHairstyle && <div className="selected-look-summary"><img src={selectedHairstyle.imageUrl} alt="" /><div><span>Selected from hairstyles</span><strong>{selectedHairstyle.name}</strong><p>{selectedService.name}</p></div></div>}
+              <label className="booking-field">Category<select value={selectedService.name} onChange={(event) => chooseCategory(event.target.value)}>{availableServices.map((item) => <option key={item.id} value={item.name}>{item.name}</option>)}</select></label>
+              <label className="booking-field">Style or service name<input value={optionName} readOnly={Boolean(selectedHairstyle)} onChange={(event) => { setSelectedHairstyle(null); setManualOptionName(event.target.value); }} placeholder="Example: Ghana weaving, wig revamp, bridal bun..." /></label>
+              {selectedHairstyle && <div className="selected-option-description"><span>Style selected from gallery</span>{optionDescription && <p>{optionDescription}</p>}<button type="button" onClick={switchToManualInput}>Switch to manual input</button></div>}
+              <label className="booking-field wide">Optional note<textarea value={details.notes} onChange={(event) => setDetails({ ...details, notes: event.target.value })} placeholder="Tell us the length, size, colour, finish, allergies, timing concern, or anything useful before your visit." /></label>
+              {!selectedHairstyle && <label className={referenceUploading ? "reference-drop disabled" : "reference-drop"} onDrop={(event) => { event.preventDefault(); if (!referenceUploading) handleReferenceFile(event.dataTransfer.files[0] ?? null); }} onDragOver={(event) => event.preventDefault()}>
+                <input type="file" accept="image/*" disabled={Boolean(selectedHairstyle) || referenceUploading} onChange={(event) => handleReferenceFile(event.target.files?.[0] ?? null)} />
+                {referenceUploading ? <><strong>Uploading reference image...</strong><span>Please wait a moment.</span></> : optionReferenceImage ? <><img src={optionReferenceImage} alt="" /><span>{selectedHairstyle ? "Gallery reference attached" : manualReference?.fileName ?? "Reference image attached"}</span></> : <><strong>Drop optional reference image here</strong><span>or click to upload a look you want us to see.</span></>}
+              </label>}
+              {referenceError && <p className="admin-error">{referenceError}</p>}
+              {bookingError && step === 1 && <p className="admin-error">{bookingError}</p>}
+            </div>}
+            {step === 2 && <div className="booking-step"><p className="step-label">02 - Select a date and time</p><div className="calendar-grid">{calendarDays.map((day) => <button key={day.iso} disabled={day.disabled} className={date === day.iso ? "selected" : ""} onClick={() => chooseDate(day)}><span>{day.weekday}</span><strong>{day.day}</strong></button>)}</div><div className="time-grid">{times.map((item) => <button key={item} disabled={bookedTimes[date]?.includes(item)} className={time === item ? "selected" : ""} onClick={() => { setBookingError(""); setTime(item); }}>{item}</button>)}</div>{availableTimes.length === 0 && <p className="admin-error">This day is fully booked. Please choose another date.</p>}{bookingError && <p className="admin-error">{bookingError}</p>}</div>}
+            {step === 3 && <form className="booking-step details-form" id="details-form" onSubmit={(e) => { e.preventDefault(); setStep(4); }}><p className="step-label">03 - Your details</p><label>Full name<input required value={details.name} onChange={(e) => setDetails({...details, name:e.target.value})} placeholder="Ada Okafor" /></label><label>Phone number<input required type="tel" value={details.phone} onChange={(e) => setDetails({...details, phone:e.target.value})} placeholder="+234 800 000 0000" /></label><label>Email address<input required type="email" value={details.email} onChange={(e) => setDetails({...details, email:e.target.value})} placeholder="you@example.com" /></label></form>}
             {step === 4 && <form className="booking-step summary" onSubmit={submitBooking}>
               <p className="step-label">04 - Payment and confirmation</p>
-              <div><span>Service</span><strong>{selectedService.name}</strong></div>
-              {selectedHairstyle && <div><span>Hairstyle</span><strong>{selectedHairstyle.name}</strong></div>}
+              <div><span>Category</span><strong>{selectedService.name}</strong></div>
+              <div><span>Service / hairstyle</span><strong>{optionName}</strong></div>
+              {optionDescription && <div><span>Description</span><strong>{optionDescription}</strong></div>}
+              {optionReferenceImage && <div><span>Reference image</span><strong>Attached</strong></div>}
               <div><span>Date</span><strong>{date}</strong></div>
               <div><span>Time</span><strong>{time}</strong></div>
               <div><span>Name</span><strong>{details.name}</strong></div>
@@ -539,8 +621,8 @@ export default function Home() {
               {bookingError && <p className="admin-error">{bookingError}</p>}
               <button className="button gold" type="submit">{paymentOption === "pay_on_arrival" ? "Confirm appointment" : "Continue to payment"}</button>
             </form>}
-            {step < 4 && <div className="booking-actions"><button disabled={step === 1 || (selectedHairstyle && step === 2)} onClick={() => setStep(step - 1)}>Back</button><button className="next" type={step === 3 ? "submit" : "button"} form={step === 3 ? "details-form" : undefined} disabled={step === 2 && availableTimes.length === 0} onClick={step === 3 ? undefined : () => setStep(step + 1)}>Continue <span aria-hidden="true">&rarr;</span></button></div>}
-          </> : <div className="confirmation"><span>Done</span><p>Appointment request received</p><h2>We'll see you soon, {details.name.split(" ")[0]}.</h2><div><strong>{selectedService.name}</strong><p>{date} at {time}</p></div><button className="button gold" onClick={() => setBookingOpen(false)}>Back to the website</button></div>}
+            {step < 4 && <div className="booking-actions"><button disabled={step === 1} onClick={() => setStep(step - 1)}>Back</button><button className="next" type={step === 3 ? "submit" : "button"} form={step === 3 ? "details-form" : undefined} disabled={(step === 1 && (!optionName || referenceUploading)) || (step === 2 && availableTimes.length === 0)} onClick={step === 3 ? undefined : () => setStep(step + 1)}>Continue <span aria-hidden="true">&rarr;</span></button></div>}
+          </> : <div className="confirmation"><span>Done</span><p>Appointment request received</p><h2>We'll see you soon, {details.name.split(" ")[0]}.</h2><div><strong>{optionName || selectedService.name}</strong><p>{date} at {time}</p></div><button className="button gold" onClick={() => setBookingOpen(false)}>Back to the website</button></div>}
         </div>
       </div>}
     </main>
@@ -579,6 +661,48 @@ function firstAvailableTime(date: string, bookedTimes: Record<string, string[]>)
   return times.find((item) => !bookedTimes[date]?.includes(item));
 }
 
+async function uploadReferenceImageToImageKit(file: File) {
+  const authResponse = await fetch("/api/uploads/reference", { cache: "no-store" });
+  const auth = await authResponse.json().catch(() => null) as ImageKitAuthPayload | null;
+  if (!authResponse.ok || !auth?.publicKey || !auth.signature || !auth.token || !auth.expire) {
+    throw new Error(auth?.error ?? "Unable to prepare image upload.");
+  }
+
+  const formData = new FormData();
+  formData.set("file", file);
+  formData.set("fileName", cleanReferenceFileName(file.name));
+  formData.set("publicKey", auth.publicKey);
+  formData.set("signature", auth.signature);
+  formData.set("expire", String(auth.expire));
+  formData.set("token", auth.token);
+  formData.set("folder", auth.folder || "/sheer_elegance/booking-references");
+  formData.set("useUniqueFileName", "true");
+
+  const uploadResponse = await fetch("https://upload.imagekit.io/api/v1/files/upload", {
+    method: "POST",
+    body: formData,
+  });
+  const upload = await uploadResponse.json().catch(() => null) as { url?: string; message?: string } | null;
+  if (!uploadResponse.ok || !upload?.url) {
+    throw new Error(upload?.message ?? "We could not upload that image. Please try again.");
+  }
+  return upload.url;
+}
+
+type ImageKitAuthPayload = {
+  publicKey?: string;
+  signature?: string;
+  token?: string;
+  expire?: number;
+  folder?: string;
+  error?: string;
+};
+
+function cleanReferenceFileName(value: string) {
+  const safeName = value.trim().replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
+  return safeName || `booking-reference-${Date.now()}.jpg`;
+}
+
 function bestServiceForHairstyle(hairstyle: Hairstyle, availableServices: Service[]) {
   const text = `${hairstyle.name} ${hairstyle.category} ${hairstyle.tags.join(" ")}`.toLowerCase();
   const ranked = availableServices
@@ -595,14 +719,4 @@ function bestServiceForHairstyle(hairstyle: Hairstyle, availableServices: Servic
     })
     .sort((a, b) => b.score - a.score);
   return ranked[0]?.score ? ranked[0].service : availableServices[0];
-}
-
-function paymentAmountFor(
-  option: "deposit" | "half" | "full" | "pay_on_arrival",
-  priceNaira: number,
-) {
-  if (option === "deposit") return 10000;
-  if (option === "half") return Math.ceil(priceNaira / 2);
-  if (option === "full") return priceNaira;
-  return 0;
 }

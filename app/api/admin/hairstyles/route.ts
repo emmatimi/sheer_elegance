@@ -51,22 +51,19 @@ function parseHairstyles(payload: unknown): Hairstyle[] {
     if (!hairstyle || typeof hairstyle !== "object") throw new Error(`Hairstyle ${index + 1} is invalid`);
     const item = hairstyle as Record<string, unknown>;
     const id = Number(item.id);
-    const sortOrder = Number(item.sortOrder);
     if (!Number.isInteger(id)) throw new Error("Hairstyle id is invalid");
 
     return {
       id,
       name: requiredString(item.name, "name"),
-      slug: requiredString(item.slug, "slug"),
       category: requiredString(item.category, "category"),
       imageUrl: requiredString(item.imageUrl, "imageUrl"),
       description: requiredString(item.description, "description"),
       tags: Array.isArray(item.tags)
         ? item.tags.map((tag) => requiredString(tag, "tag"))
         : typeof item.tags === "string"
-          ? item.tags.split(",").map((tag) => tag.trim()).filter(Boolean)
-          : [],
-      sortOrder: Number.isInteger(sortOrder) ? sortOrder : index + 1,
+        ? item.tags.split(",").map((tag) => tag.trim()).filter(Boolean)
+        : [],
     };
   });
 }

@@ -4,25 +4,21 @@ import { queryRows, withDbConnection } from "./index";
 export type Service = {
   id: number;
   name: string;
-  slug: string;
   category: string;
   priceNaira: number;
   durationMinutes: number;
   imageUrl: string;
   shortDescription: string;
   isFeatured: boolean;
-  sortOrder: number;
 };
 
 export type Hairstyle = {
   id: number;
   name: string;
-  slug: string;
   category: string;
   imageUrl: string;
   description: string;
   tags: string[];
-  sortOrder: number;
 };
 
 export type SalonSettings = {
@@ -64,14 +60,12 @@ export type PaymentStatus = "not_required" | "pending" | "paid" | "failed";
 type ServiceRow = RowDataPacket & {
   id: number;
   name: string;
-  slug: string;
   category: string;
   price_naira: number;
   duration_minutes: number;
   image_url: string;
   short_description: string;
   is_featured: number | boolean;
-  sort_order: number;
 };
 
 type SettingRow = RowDataPacket & {
@@ -108,12 +102,10 @@ type BookingRow = RowDataPacket & {
 type HairstyleRow = RowDataPacket & {
   id: number;
   name: string;
-  slug: string;
   category: string;
   image_url: string;
   description: string;
   tags: string;
-  sort_order: number;
 };
 
 type BookedTimeRow = RowDataPacket & {
@@ -127,10 +119,10 @@ type CountRow = RowDataPacket & {
 
 export async function getServices() {
   const rows = await queryRows<ServiceRow>(
-    `SELECT id, name, slug, category, price_naira, duration_minutes, image_url,
-      short_description, is_featured, sort_order
+    `SELECT id, name, category, price_naira, duration_minutes, image_url,
+      short_description, is_featured
      FROM services
-     ORDER BY sort_order ASC, id ASC`,
+     ORDER BY id ASC`,
   );
 
   return rows.map(toService);
@@ -138,9 +130,9 @@ export async function getServices() {
 
 export async function getHairstyles() {
   const rows = await queryRows<HairstyleRow>(
-    `SELECT id, name, slug, category, image_url, description, tags, sort_order
+    `SELECT id, name, category, image_url, description, tags
      FROM hairstyles
-     ORDER BY sort_order ASC, id ASC`,
+     ORDER BY id ASC`,
   );
   return rows.map(toHairstyle);
 }
@@ -152,27 +144,25 @@ export async function saveHairstyles(hairstyles: Hairstyle[]) {
       for (const hairstyle of hairstyles) {
         const values = [
           hairstyle.name,
-          hairstyle.slug,
           hairstyle.category,
           hairstyle.imageUrl,
           hairstyle.description,
           hairstyle.tags.join(","),
-          hairstyle.sortOrder,
         ];
 
         if (hairstyle.id > 0) {
           await connection.query(
             `UPDATE hairstyles
-             SET name = ?, slug = ?, category = ?, image_url = ?,
-               description = ?, tags = ?, sort_order = ?
+             SET name = ?, category = ?, image_url = ?,
+               description = ?, tags = ?
              WHERE id = ?`,
             [...values, hairstyle.id],
           );
         } else {
           await connection.query(
             `INSERT INTO hairstyles
-              (name, slug, category, image_url, description, tags, sort_order)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+              (name, category, image_url, description, tags)
+             VALUES (?, ?, ?, ?, ?)`,
             values,
           );
         }
@@ -198,32 +188,30 @@ export async function saveServices(services: Service[]) {
       for (const service of services) {
         const values = [
           service.name,
-          service.slug,
-          service.category,
+          service.name,
           service.priceNaira,
           service.durationMinutes,
           service.imageUrl,
           service.shortDescription,
           service.isFeatured ? 1 : 0,
-          service.sortOrder,
         ];
 
         if (service.id > 0) {
           await connection.query(
             `UPDATE services
-             SET name = ?, slug = ?, category = ?,
+             SET name = ?, category = ?,
                price_naira = ?, duration_minutes = ?,
                image_url = ?, short_description = ?,
-               is_featured = ?, sort_order = ?
+               is_featured = ?
              WHERE id = ?`,
             [...values, service.id],
           );
         } else {
           await connection.query(
             `INSERT INTO services (
-              name, slug, category, price_naira, duration_minutes,
-              image_url, short_description, is_featured, sort_order
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              name, category, price_naira, duration_minutes,
+              image_url, short_description, is_featured
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
             values,
           );
         }
@@ -490,14 +478,12 @@ function toService(row: ServiceRow): Service {
   return {
     id: row.id,
     name: row.name,
-    slug: row.slug,
-    category: row.category,
+    category: row.category || row.name,
     priceNaira: row.price_naira,
     durationMinutes: row.duration_minutes,
     imageUrl: row.image_url,
     shortDescription: row.short_description,
     isFeatured: Boolean(row.is_featured),
-    sortOrder: row.sort_order,
   };
 }
 
@@ -505,12 +491,10 @@ function toHairstyle(row: HairstyleRow): Hairstyle {
   return {
     id: row.id,
     name: row.name,
-    slug: row.slug,
     category: row.category,
     imageUrl: row.image_url,
     description: row.description,
     tags: row.tags.split(",").map((tag) => tag.trim()).filter(Boolean),
-    sortOrder: row.sort_order,
   };
 }
 

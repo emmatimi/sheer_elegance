@@ -95,7 +95,7 @@ export function bookingReceiptHtml(booking: Booking, settings: SalonSettings) {
     ${detailsTable([
       ["Receipt no.", booking.paymentReference ?? `booking-${booking.id}`],
       ["Customer", booking.customerName],
-      ["Service", booking.serviceName],
+      ["Category", booking.serviceName],
       ...hairstyleRows(booking),
       ["Appointment", `${booking.appointmentDate} - ${booking.appointmentTime}`],
       ["Transaction reference", booking.transactionReference ?? "Pending"],
@@ -244,7 +244,7 @@ function customerBookingEmail(booking: Booking, settings: SalonSettings, logoUrl
     <p>Hello ${escapeHtml(firstName(booking.customerName))},</p>
     <p>Thank you for booking with Oreoluwa Sheer Elegance. We have received your appointment request and our team will confirm shortly.</p>
     ${detailsTable([
-      ["Service", booking.serviceName],
+      ["Category", booking.serviceName],
       ...hairstyleRows(booking),
       ["Date", booking.appointmentDate],
       ["Time", booking.appointmentTime],
@@ -264,7 +264,7 @@ function adminBookingEmail(booking: Booking, settings: SalonSettings, logoUrl: s
       ["Customer", booking.customerName],
       ["Phone", booking.customerPhone],
       ["Email", booking.customerEmail],
-      ["Service", booking.serviceName],
+      ["Category", booking.serviceName],
       ...hairstyleRows(booking),
       ["Date", booking.appointmentDate],
       ["Time", booking.appointmentTime],
@@ -276,7 +276,7 @@ function adminBookingEmail(booking: Booking, settings: SalonSettings, logoUrl: s
 
 function hairstyleRows(booking: Booking): Array<[string, string]> {
   if (!booking.hairstyleName) return [];
-  return [["Hairstyle", booking.hairstyleName]];
+  return [["Hairstyle/service option", booking.hairstyleName]];
 }
 
 function hairstyleBlock(booking: Booking, options: { allowDataImage?: boolean } = {}) {
@@ -284,7 +284,7 @@ function hairstyleBlock(booking: Booking, options: { allowDataImage?: boolean } 
   const imageUrl = emailSafeImageUrl(booking.hairstyleImageUrl, { allowDataImage: options.allowDataImage });
   const title = booking.hairstyleName ? escapeHtml(booking.hairstyleName) : "";
   return `
-    <p style="margin:20px 0 8px;color:#8d7132">Hairstyle reference</p>
+    <p style="margin:20px 0 8px;color:#8d7132">Hairstyle/service option reference</p>
     ${title ? `<p style="margin:0 0 8px;font-weight:700">${title}</p>` : ""}
     ${imageUrl ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(booking.hairstyleName ?? "Hairstyle reference")}" style="width:100%;max-height:360px;object-fit:cover;border:1px solid #ded6ca;display:block" />` : ""}
     ${booking.hairstyleDescription ? `<p>${escapeHtml(booking.hairstyleDescription)}</p>` : ""}

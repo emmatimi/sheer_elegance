@@ -15,6 +15,7 @@
     "admin:seed": "node --env-file=.env scripts/seed-admin.mjs"
   },
   "dependencies": {
+    "imagekit": "^6.0.0",
     "jose": "^6.2.8",
     "mysql2": "^3.23.2",
     "react": "19.2.6",

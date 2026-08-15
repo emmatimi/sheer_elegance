@@ -42,3 +42,5 @@ yarn-error.log*
 
 # Ignore sensitive migration scripts
 scripts/migrate-to-aiven.mjs
+db\mysql-connection-notes.md
+db\mysql-schema.sql

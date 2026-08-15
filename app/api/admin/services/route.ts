@@ -59,20 +59,16 @@ function parseServices(payload: unknown): Service[] {
     const id = Number(item.id);
     const priceNaira = Number(item.priceNaira ?? 0);
     const durationMinutes = Number(item.durationMinutes ?? 0);
-    const sortOrder = Number(item.sortOrder);
-
     if (!Number.isInteger(id)) throw new Error("Service id is invalid");
     return {
       id,
       name: requiredString(item.name, "name"),
-      slug: requiredString(item.slug, "slug"),
-      category: typeof item.category === "string" && item.category.trim() ? item.category.trim() : requiredString(item.name, "name"),
+      category: requiredString(item.name, "name"),
       priceNaira: Number.isInteger(priceNaira) && priceNaira >= 0 ? priceNaira : 0,
       durationMinutes: Number.isInteger(durationMinutes) && durationMinutes >= 0 ? durationMinutes : 0,
       imageUrl: requiredString(item.imageUrl, "imageUrl"),
       shortDescription: requiredString(item.shortDescription, "shortDescription"),
       isFeatured: Boolean(item.isFeatured),
-      sortOrder: Number.isInteger(sortOrder) ? sortOrder : index + 1,
     };
   });
 }
