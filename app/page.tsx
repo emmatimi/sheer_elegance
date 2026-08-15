@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { CSSProperties, FormEvent, MouseEvent, useEffect, useMemo, useState } from "react";
 
@@ -570,12 +570,12 @@ export default function Home() {
         <div>
           <p className="eyebrow dark">Contact us</p>
           <h2>Ready for your next appointment?</h2>
-          <p>Visit us in Ekiti Phase 1 or send a message to plan your silk press, colour service, protective style or restorative treatment.</p>
+          <p>Visit us in Osekita Phase 2 or send a message to plan your silk press, colour service, protective style or restorative treatment.</p>
         </div>
         <div className="contact-us-details">
-          <article><span>Visit</span><p>14 Admiralty Way<br />Akure , Ondo</p></article>
-          <article><span>Opening hours</span><p>Tue-Fri - 9am-7pm<br />Sat - 8am-6pm</p></article>
-          <article><span>Talk to us</span><p>+234 810 000 2026<br />hello@sheerelegance.ng</p></article>
+          <article><span>Visit</span><p>Phase 2<br />Osekita ,Ado Ekiti, Ekiti</p></article>
+          <article><span>Opening hours</span><p>Mon-Sat - 9am-7pm<br />Sun - 2pm-7pm</p></article>
+          <article><span>Talk to us</span><p>+2347041837013<br />hello@sheerelegance.ng</p></article>
           <a className="button gold contact-us-book-tile" href="/book">Book an appointment <span aria-hidden="true">&rarr;</span></a>
         </div>
       </section>
