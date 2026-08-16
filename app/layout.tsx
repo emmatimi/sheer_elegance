@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   description: "Healthy hair, considered styling and an experience designed entirely around you. Book your Sheer Elegance appointment.",
   icons: { icon: "/sheer-elegance-logo.png", shortcut: "/sheer-elegance-logo.png" },
   openGraph: {
-    title: "Oreoluwa Sheer Elegance | Luxury Hair Studio",
+    title: "Sheer Elegance | Luxury Hair Studio",
     description: "Healthy hair, considered styling and an experience designed entirely around you. Book your Sheer Elegance appointment.",
     url: siteUrl,
     siteName: "Oreoluwa Sheer Elegance",
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Oreoluwa Sheer Elegance | Luxury Hair Studio",
+    title: "Sheer Elegance | Luxury Hair Studio",
     description: "Healthy hair, considered styling and an experience designed entirely around you. Book your Sheer Elegance appointment.",
     images: [socialImage],
   },
