@@ -205,6 +205,22 @@ export default function Home() {
     }, { rootMargin: "0px 0px -12% 0px", threshold: 0.12 });
 
     animatedItems.forEach((item) => observer.observe(item));
+
+    // Services section needs its own observer — the cards are dynamic (API-loaded)
+    // so we track the section separately and never hide it with opacity:0
+    const servicesSection = document.querySelector<HTMLElement>("[data-services]");
+    if (servicesSection) {
+      const servicesObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+            servicesObserver.unobserve(entry.target);
+          }
+        });
+      }, { rootMargin: "0px 0px -8% 0px", threshold: 0.08 });
+      servicesObserver.observe(servicesSection);
+    }
+
     return () => observer.disconnect();
   }, []);
 
@@ -479,13 +495,13 @@ export default function Home() {
       </section>
 
       <section className="quick-book" aria-label="Quick booking" data-animate>
-        <div><span>01</span><p>Choose a service</p><strong>{service}</strong></div>
-        <div><span>02</span><p>Select a date</p><strong>{date}</strong></div>
-        <div><span>03</span><p>Find your moment</p><strong>{time}</strong></div>
-        <div className="quick-book-final"><span>04</span><p>Confirm your visit</p><strong>Appointment request</strong></div>
+        <div><span>01</span><p>Choose your style</p><strong>Browse our services and select the look you want</strong></div>
+        <div><span>02</span><p>Pick your date</p><strong>Find a day that works for you.</strong></div>
+        <div><span>03</span><p>Choose your time</p><strong>Select an available appointment time.</strong></div>
+        <div className="quick-book-final"><span>04</span><p>Confirm your visit</p><strong>Send your request and we’ll take it from there.</strong></div>
       </section>
 
-      <section className="section services" id="services" data-animate>
+      <section className="section services" id="services" data-services>
         <div className="section-heading">
           <div><p className="eyebrow dark">Salon menu</p><h2>Hair care made for<br /><em className="script-word">real life.</em></h2></div>
           <p>Choose from silk press, Ghana weaving, knotless braids, lace frontal installs, relaxer retouching, bridal styling and treatment plans designed for humid weather and textured hair.</p>

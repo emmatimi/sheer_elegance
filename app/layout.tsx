@@ -10,7 +10,7 @@ const socialImage = "/sheer-elegance-logo.png";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: "Oreoluwa Sheer Elegance | Luxury Hair Studio ",
+  title: "Sheer Elegance | Luxury Hair Studio ",
   description: "Healthy hair, considered styling and an experience designed entirely around you. Book your Sheer Elegance appointment.",
   icons: { icon: "/sheer-elegance-logo.png", shortcut: "/sheer-elegance-logo.png" },
   openGraph: {
