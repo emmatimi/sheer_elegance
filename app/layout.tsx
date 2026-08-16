@@ -6,7 +6,7 @@ const display = Cormorant_Garamond({ variable: "--font-display", subsets: ["lati
 const sans = Manrope({ variable: "--font-sans", subsets: ["latin"], weight: ["400", "500", "600", "700"] });
 const script = Allura({ variable: "--font-script", subsets: ["latin"], weight: "400" });
 const siteUrl = process.env.SITE_URL ?? "https://sheer-elegance.my-brand.workers.dev";
-const socialImage = `${siteUrl}/og-image.jpg`;
+const socialImage = `${siteUrl}/og-image.jpg?v=2`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
