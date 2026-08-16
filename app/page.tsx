@@ -495,10 +495,10 @@ export default function Home() {
       </section>
 
       <section className="quick-book" aria-label="Quick booking" data-animate>
-        <div><span>01</span><p>Choose your style</p><strong>Browse our services and select the look you want</strong></div>
-        <div><span>02</span><p>Pick your date</p><strong>Find a day that works for you.</strong></div>
-        <div><span>03</span><p>Choose your time</p><strong>Select an available appointment time.</strong></div>
-        <div className="quick-book-final"><span>04</span><p>Confirm your visit</p><strong>Send your request and we’ll take it from there.</strong></div>
+        <div><span>01</span><p>Choose your style</p><strong>Find your perfect look.</strong></div>
+        <div><span>02</span><p>Pick your date</p><strong>Choose a day that works.</strong></div>
+        <div><span>03</span><p>Choose your time</p><strong>Select your preferred time.</strong></div>
+        <div className="quick-book-final"><span>04</span><p>Confirm your visit</p><strong>Send your booking request.</strong></div>
       </section>
 
       <section className="section services" id="services" data-services>
